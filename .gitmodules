@@ -1,0 +1,6 @@
+[submodule "client/repometric/LinterHub"]
+	path = client/repometric/LinterHub
+	url = https://github.com/Repometric/LinterHub.git
+[submodule "client/repometric/Integrations.Linters"]
+	path = client/repometric/Integrations.Linters
+	url = https://github.com/Repometric/Integrations.Linters

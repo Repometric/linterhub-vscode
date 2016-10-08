@@ -1,0 +1,41 @@
+{
+	"name": "linterhub",
+	"description": "Linterhub extension",
+	"author": "Repometric",
+	"license": "MIT",
+	"version": "0.0.7",
+	"publisher": "Repometric",
+	"engines": {
+		"vscode": "^1.4.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"*"
+	],
+	"main": "./out/src/extension",
+	"contributes": {
+		"commands": [{
+			"command": "linterhub.activate",
+			"title": "Activate linter"
+		},
+		{
+			"command": "linterhub.deactivate",
+			"title": "Deactivate linter"
+		}]
+	},	
+	"scripts": {
+		"vscode:prepublish": "node ./node_modules/vscode/bin/compile",
+		"compile": "node ./node_modules/vscode/bin/compile -watch -p ./",
+		"postinstall": "node ./node_modules/vscode/bin/install"
+
+	},
+	"devDependencies": {
+		"typescript": "^1.8.9",
+		"vscode": "^0.11.0"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^2.2.1"
+	}
+}
