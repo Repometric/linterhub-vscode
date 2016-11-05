@@ -45,9 +45,8 @@ class File
 
 let files: File[];
 let appRoot: string = path.resolve(__dirname);
-let cli_path: string = "dotnet " + appRoot + "/../repometric/Integrations.Linters/src/Metrics.Integrations.Linters.Cli/bin/publish/Metrics.Integrations.Linters.Cli.dll";
-let config_path: string = appRoot + "/../repometric/Integrations.Linters/src/Metrics.Integrations.Linters.Cli/config.Windows.json";
-
+let cli_root: string = appRoot + "/../repometric/linterhub-cli/src/cli";
+let cli_path: string = "dotnet " + cli_root + "/bin/publish/cli.dll";
 connection.onRequest({method: "CreateConfig"}, (params : { Linter : string }) : void => {
 	execSync(cli_path + " " + params.Linter + " " + workspaceRoot + " --init");
 });
@@ -68,7 +67,11 @@ function validateProject(document: TextDocument): void {
 	let items: string[] = getDirectories(workspaceRoot + "/.linterhub");
 	for(let linter_name of items) {
 		setStatusBar("execute " + linter_name);
-		exec(cli_path + " --config " + config_path + " --linter " + linter_name + " --project " + workspaceRoot, function(error, stdout, stderr) {
+		exec(cli_path + " --mode=Analyze --linter=" + linter_name + " --project=" + workspaceRoot,
+		{
+			cwd: cli_root
+		},
+		function(error, stdout, stderr) {
 			if (error) {
 				setStatusBar(`exec error: ${error}`);
 				return;

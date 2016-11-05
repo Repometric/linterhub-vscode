@@ -1,7 +1,7 @@
 {
 	"name": "linterhub-extension-server",
 	"description": "Linterhub extension",
-	"version": "0.0.8",
+	"version": "0.0.15",
 	"author": "Repometric",
 	"license": "MIT",
 	"engines": {

@@ -10,8 +10,9 @@ import { spawn, execSync, exec } from "child_process";
 let linters: string[] = [];
 let appPath: string = path.resolve(__dirname);
 let appRoot: string = appPath.substr(0, appPath.length - 7);
-let cli_path: string = "dotnet " + appRoot + "repometric/Integrations.Linters/src/Metrics.Integrations.Linters.Cli/bin/publish/Metrics.Integrations.Linters.Cli.dll";
-let config_path: string = appRoot + "repometric/Integrations.Linters/src/Metrics.Integrations.Linters.Cli/config.Windows.json";
+let cli_root: string = appRoot + "repometric/linterhub-cli/src/cli";
+let cli_path: string = "dotnet " + cli_root + "/bin/publish/cli.dll";
+//let config_path: string = appRoot + "repometric/Integrations.Linters/src/Metrics.Integrations.Linters.Cli/config.Windows.json";
 
 function status(s: string): void
 {
@@ -37,14 +38,25 @@ export function activate(context: ExtensionContext) {
 		}
 	}
 
-	let stdout = execSync(cli_path + " --mode Linters --config " + config_path).toString();
-	let parsed = JSON.parse(stdout);
+	status("ready");
+
+	let stdout = execSync(cli_path + " --mode=Catalog", {
+  		cwd: cli_root
+	}).toString();
 	let ds: string[] = [];
-	parsed.forEach(element => {
-		if(ds.findIndex(x => x == element.languages) == -1) ds.push(element.languages);
-		linters.push(element.name);
-	});
-	clientOptions.documentSelector = ds;
+	try
+	{
+		let parsed = JSON.parse(stdout);
+		parsed.forEach(element => {
+			if(ds.findIndex(x => x == element.languages) == -1) ds.push(element.languages);
+			linters.push(element.name);
+		});
+		clientOptions.documentSelector = ds;
+	}
+	catch(e)
+	{
+		status("catch error while parsing linters list");
+	}
 	
 	// Create the language client and start the client.
 	let lc = new LanguageClient('LinterHub Server', serverOptions, clientOptions);
@@ -88,5 +100,4 @@ export function activate(context: ExtensionContext) {
 			}
 		});
 	}));
-	status("ready");
 }

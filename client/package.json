@@ -3,7 +3,7 @@
 	"description": "Linterhub extension",
 	"author": "Repometric",
 	"license": "MIT",
-	"version": "0.0.7",
+	"version": "0.0.15",
 	"publisher": "Repometric",
 	"engines": {
 		"vscode": "^1.4.0"
