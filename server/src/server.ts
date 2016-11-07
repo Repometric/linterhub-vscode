@@ -6,8 +6,8 @@ import {
 	CompletionItem, CompletionItemKind
 } from 'vscode-languageserver';
 import { spawn, execSync, exec } from "child_process";
-var fs = require('fs');
-var path = require('path');
+import * as fs from 'fs';
+import * as path from 'path';
 
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
 let documents: TextDocuments = new TextDocuments();
@@ -45,8 +45,9 @@ class File
 
 let files: File[];
 let appRoot: string = path.resolve(__dirname);
-let cli_root: string = appRoot + "/../repometric/linterhub-cli/src/cli";
-let cli_path: string = "dotnet " + cli_root + "/bin/publish/cli.dll";
+let cli_root: string = path.join(appRoot, "/../repometric/linterhub-cli/src/cli");
+let cli_path: string = null;
+
 connection.onRequest({method: "CreateConfig"}, (params : { Linter : string }) : void => {
 	execSync(cli_path + " " + params.Linter + " " + workspaceRoot + " --init");
 });
@@ -62,12 +63,27 @@ function getDirectories(srcpath) {
   	});
 }
 
+function fromDir(startPath,filter){
+    var files=fs.readdirSync(startPath);
+    for(let i=0; i<files.length; ++i){
+        var filename=path.join(startPath,files[i]);
+        var stat = fs.lstatSync(filename);
+        if (stat.isDirectory()){
+            fromDir(filename,filter); //recurse
+        }
+        else if (filename.indexOf(filter)>=0) {
+			cli_path = filename;
+        };
+    };
+};
+
 function validateProject(document: TextDocument): void {
 	let files: File[] = [];
 	let items: string[] = getDirectories(workspaceRoot + "/.linterhub");
+	fromDir(cli_root, 'publish\\cli.dll');
 	for(let linter_name of items) {
 		setStatusBar("execute " + linter_name);
-		exec(cli_path + " --mode=Analyze --linter=" + linter_name + " --project=" + workspaceRoot,
+		exec("dotnet " + cli_path + " --mode=Analyze --linter=" + linter_name + " --project=" + workspaceRoot,
 		{
 			cwd: cli_root
 		},
