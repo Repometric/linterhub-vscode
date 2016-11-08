@@ -11,7 +11,6 @@ let linters: string[] = [];
 let appPath: string = path.resolve(__dirname);
 let appRoot: string = path.normalize(appPath + "/../..");
 let cli_root: string = path.join(appRoot, "repometric/linterhub-cli/src/cli");
-//let config_path: string = appRoot + "repometric/Integrations.Linters/src/Metrics.Integrations.Linters.Cli/config.Windows.json";
 let cli_path: string = null;
 
 function status(s: string): void
@@ -104,37 +103,77 @@ export function activate(context: ExtensionContext) {
 		// client can be deactivated on extension deactivation
 		context.subscriptions.push(disposable);
 
+		let config_path: string = path.join(workspace.rootPath, "/.linterhub.json")
+
 		context.subscriptions.push(vscode.commands.registerCommand('linterhub.activate', () => {
 			vscode.window.showQuickPick(linters).then(function(value: string){
 				let linter: string = value.charAt(0).toUpperCase() + value.slice(1);
-				let fpath: string = workspace.rootPath + "/.linterhub/" + value + "/config.json";
-				if (fs.existsSync(fpath)) {
-					vscode.window.showInformationMessage(linter + " is already initialized! Open .linterhub/" + value + ".json to edit settings");
+				if (!fs.existsSync(config_path)) {
+					let gen_conf =
+					{
+						mode: "docker",
+						linters: []
+					}
+					fs.writeFileSync(config_path, JSON.stringify(gen_conf, null, "\t"));
 				}
-				else{
-					lc.sendRequest({ method: "CreateConfig" }, { Linter: value });
-					vscode.window.showInformationMessage(linter + " is activated! Open .linterhub/" + value + ".json to edit settings");
+				let conf = JSON.parse(fs.readFileSync(config_path, "utf-8"));
+				let found: boolean = false;
+				conf.linters.forEach(x => {
+					if(x.name == value)
+						found = true;
+				})
+				if(found)	
+					vscode.window.showWarningMessage(linter + " is already initialized! Open .linterhub.json to edit settings");
+				else
+				{
+					lc.sendRequest({ method: "CreateConfig" }, { Linter: value, Config: config_path });
+					vscode.window.showInformationMessage(linter + " is activated! Open .linterhub.json to edit settings");
 				}
 			});
 		}));
 
 		context.subscriptions.push(vscode.commands.registerCommand('linterhub.deactivate', () => {
-			vscode.window.showQuickPick(linters).then(function(value: string){
-				let linter: string = value.charAt(0).toUpperCase() + value.slice(1);
-				let fpath: string = workspace.rootPath + "/.linterhub/" + value + "/config.json";
-				if (!fs.existsSync(fpath)) {
-					vscode.window.showInformationMessage(linter + " is not initialized");
+			if (!fs.existsSync(config_path)) {
+				let gen_conf =
+				{
+					mode: "docker",
+					linters: []
 				}
-				else{
-					fs.unlink(fpath, function(err) {
-						if(err) {
-							vscode.window.showErrorMessage("Error: " + err);
+				fs.writeFileSync(config_path, JSON.stringify(gen_conf, null, "\t"));
+			}
+			let conf = JSON.parse(fs.readFileSync(config_path, "utf-8"));
+			if(conf.linters.length == 0)
+			{
+				vscode.window.showWarningMessage("Can't find any active linters");
+			}
+			else 
+			{
+				let act_linters: string[] = [];
+				conf.linters.forEach(x => {
+					act_linters.push(x.name);
+				});
+				vscode.window.showQuickPick(linters).then(function(value: string){
+					let linter: string = value.charAt(0).toUpperCase() + value.slice(1);
+					let found: boolean = false;
+					let ind: Number = -1;
+					conf.linters.forEach(x => {
+						if(x.name == value)
+						{
+							found = true;
+							ind = conf.linters.indexOf(x);
 						}
-						else
-							vscode.window.showInformationMessage(linter + " is deactivated!");
-					}); 
-				}
-			});
+					})
+
+					if(found)
+					{
+						conf.linters.splice(ind, 1);
+						fs.writeFileSync(config_path, JSON.stringify(conf, null, "\t"));
+						vscode.window.showInformationMessage(linter + " is deactivated!");
+					}
+					else
+						vscode.window.showWarningMessage(linter + " is not initialized");
+				});
+			}
 		}));
 	}
 }

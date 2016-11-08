@@ -47,9 +47,20 @@ let files: File[];
 let appRoot: string = path.resolve(__dirname);
 let cli_root: string = path.join(appRoot, "/../repometric/linterhub-cli/src/cli");
 let cli_path: string = null;
+fromDir(cli_root, 'publish\\cli.dll');
 
-connection.onRequest({method: "CreateConfig"}, (params : { Linter : string }) : void => {
-	execSync(cli_path + " " + params.Linter + " " + workspaceRoot + " --init");
+connection.onRequest({method: "CreateConfig"}, (params : { Linter : string, Config: string }) : void => {
+	let out: string = execSync("dotnet " + cli_path + " --mode=Generate --linter=" + params.Linter,
+	{
+		cwd: cli_root
+	}).toString();
+	let conf = JSON.parse(fs.readFileSync(params.Config, "utf-8"));
+	conf.linters[conf.linters.length] =
+	{
+		name: params.Linter,
+		config: JSON.parse(out)
+	}
+	fs.writeFileSync(params.Config, JSON.stringify(conf, null, '\t'));
 });
 
 function setStatusBar(s: string)
@@ -79,9 +90,9 @@ function fromDir(startPath,filter){
 
 function validateProject(document: TextDocument): void {
 	let files: File[] = [];
-	let items: string[] = getDirectories(workspaceRoot + "/.linterhub");
-	fromDir(cli_root, 'publish\\cli.dll');
-	for(let linter_name of items) {
+	let conf = JSON.parse(fs.readFileSync(workspaceRoot + "/.linterhub.json", "utf-8"));
+	for(let lint of conf.linters) {
+		let linter_name: string = lint.name; 
 		setStatusBar("execute " + linter_name);
 		exec("dotnet " + cli_path + " --mode=Analyze --linter=" + linter_name + " --project=" + workspaceRoot,
 		{
