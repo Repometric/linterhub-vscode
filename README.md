@@ -8,6 +8,8 @@ Extension needs:
 ## How to build
 First of all, u need to initiate all submodules and build Linterhub. The easiest way is to run `build.bat`. Also u can do this by using VS or VSC, just rebuild all solution.
 
+Any way extension will rebuild cli if it can't find the compiled one.
+
 Then install all dependencies for client and server part. Run `npm install` in client and server directories.
 
 ## How to develop

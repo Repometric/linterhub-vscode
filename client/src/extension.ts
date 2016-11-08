@@ -33,12 +33,27 @@ function fromDir(startPath,filter){
     };
 };
 
+function recompile_cli()
+{
+	let en_path = path.join(appRoot, "repometric/linterhub-cli/src/engine");
+	let cl_path = path.join(appRoot, "repometric/linterhub-cli/src/cli");
+	status("restoring Linterhub.Engine...");
+	execSync("dotnet restore " + en_path);
+	status("restoring Linterhub.Cli...");
+	execSync("dotnet restore " + cl_path);
+	status("compiling Linterhub.Cli...");
+	execSync("dotnet publish " + cl_path);
+	fromDir(appRoot, 'publish\\cli.dll');
+}
+
 export function activate(context: ExtensionContext) {
 	fromDir(appRoot, 'publish\\cli.dll');
 	if(cli_path == null)
 	{
-		status("can't find compiled Linterhub.Cli");
+		recompile_cli();
 	}
+	if(cli_path == null)
+		status("can't find compiled Linterhub.Cli");
 	else
 	{
 		let serverModule = context.asAbsolutePath(path.join('server', 'server.js'));
