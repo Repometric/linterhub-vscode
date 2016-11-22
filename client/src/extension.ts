@@ -3,9 +3,33 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { workspace, Disposable, ExtensionContext } from 'vscode';
-import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, TransportKind } from 'vscode-languageclient';
+import { window, commands, languages, Command, Uri, StatusBarAlignment, TextEditor } from 'vscode';
+import {
+	LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind,
+	TextDocumentIdentifier, TextEdit, NotificationType, ErrorHandler,
+	ErrorAction, CloseAction, ResponseError, InitializeError, ErrorCodes, State as ClientState,
+	Protocol2Code, ServerOptions
+} from 'vscode-languageclient';
 import * as fs from 'fs';
 import { spawn, execSync, exec } from "child_process";
+//import { Linterhub } from "./notificator";
+/*
+import { execSync, exec } from "child_process";
+import * as vscode from 'vscode';
+import {
+	LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind,
+	TextDocumentIdentifier, TextEdit, NotificationType, ErrorHandler,
+	ErrorAction, CloseAction, ResponseError, InitializeError, ErrorCodes, State as ClientState,
+	Protocol2Code
+} from 'vscode-languageclient';
+import { window, commands, languages, Command, Uri, StatusBarAlignment, TextEditor } from 'vscode';
+import * as utils from './utils'
+import * as cli from './cli'
+import * as ide from './ide'
+*/
+import * as ide from './shared/ide'
+import { StatusNotification } from './shared/ide.vscode'
+import { Integration } from './shared/ide.vscode.client'
 
 let linters: string[] = [];
 let appPath: string = path.resolve(__dirname);
@@ -32,148 +56,46 @@ function fromDir(startPath,filter){
     };
 };
 
-function recompile_cli()
-{
-	let en_path = path.join(appRoot, "repometric/linterhub-cli/src/engine");
-	let cl_path = path.join(appRoot, "repometric/linterhub-cli/src/cli");
-	status("restoring Linterhub.Engine...");
-	execSync("dotnet restore " + en_path);
-	status("restoring Linterhub.Cli...");
-	execSync("dotnet restore " + cl_path);
-	status("compiling Linterhub.Cli...");
-	execSync("dotnet publish " + cl_path);
-	fromDir(appRoot, 'publish\\cli.dll');
-}
-
 export function activate(context: ExtensionContext) {
-	fromDir(appRoot, 'publish\\cli.dll');
-	if(cli_path == null)
-	{
-		recompile_cli();
-	}
-	if(cli_path == null)
-		status("can't find compiled Linterhub.Cli");
-	else
-	{
+	fromDir(appRoot, 'publish/cli.dll');
+	cli_root = "/Volumes/Repositories/Repometric/linterhub-cli/src/cli/bin/Debug/netstandard1.6/osx.10.11-x64/publish/";
+	//let event = new Linterhub.Ide.Vscode.Event(client, vscode.window);
+	let integration = new Integration(null);
+	integration.initialize().then(x => {
+		//event.log.info('Supported linters: ' + integration.linters.join(', '));
+	}).then(() => {
+		// Setup and start client
 		let serverModule = context.asAbsolutePath(path.join('server', 'server.js'));
 		let debugOptions = { execArgv: ["--nolazy", "--debug=6004"] };
-		// If the extension is launched in debug mode then the debug server options are used
-		// Otherwise the run options are used
 		let serverOptions: ServerOptions = {
 			run : { module: serverModule, transport: TransportKind.ipc },
 			debug: { module: serverModule, transport: TransportKind.ipc, options: debugOptions }
-		}
-
-		// Options to control the language client
+		};
 		let clientOptions: LanguageClientOptions = {
-			documentSelector: [],
+			documentSelector: integration.languages,
 			synchronize: {
-				// Notify the server about file changes to '.clientrc files contain in the workspace
+				configurationSection: 'linterhub',
 				fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
 			}
-		}
+		};
+		let client = new LanguageClient('Linterhub', serverOptions, clientOptions);
+		integration.setClient(client);
+		// Setup events
+		client.onNotification(StatusNotification, (params) => integration.updateStatus(params));
+		//client.onRequest({method: "SetBarMessage"}, (params : { Message : string }) : void => status(params.Message));
 
-		status("ready");
-
-		let stdout = execSync("dotnet " + cli_path + " --mode=Catalog", {
-			cwd: path.resolve(cli_root)
-		}).toString();
-		let ds: string[] = [];
-		try
-		{
-			let parsed = JSON.parse(stdout);
-			parsed.forEach(element => {
-				if(ds.findIndex(x => x == element.languages) == -1) ds.push(element.languages);
-				linters.push(element.name);
-			});
-			clientOptions.documentSelector = ds;
-		}
-		catch(e)
-		{
-			status("catch error while parsing linters list");
-		}
-		
-		// Create the language client and start the client.
-		let lc = new LanguageClient('LinterHub Server', serverOptions, clientOptions);
-		lc.onRequest({method: "SetBarMessage"}, (params : { Message : string }) : void => {
-			status(params.Message);
-		});
-		let disposable = lc.start();
-		// Push the disposable to the context's subscriptions so that the 
-		// client can be deactivated on extension deactivation
+		let disposable = client.start();
 		context.subscriptions.push(disposable);
-
-		let config_path: string = path.join(workspace.rootPath, "/.linterhub.json")
-
-		context.subscriptions.push(vscode.commands.registerCommand('linterhub.activate', () => {
-			vscode.window.showQuickPick(linters).then(function(value: string){
-				let linter: string = value.charAt(0).toUpperCase() + value.slice(1);
-				if (!fs.existsSync(config_path)) {
-					let gen_conf =
-					{
-						mode: "docker",
-						linters: []
-					}
-					fs.writeFileSync(config_path, JSON.stringify(gen_conf, null, "\t"));
-				}
-				let conf = JSON.parse(fs.readFileSync(config_path, "utf-8"));
-				let found: boolean = false;
-				conf.linters.forEach(x => {
-					if(x.name == value)
-						found = true;
-				})
-				if(found)	
-					vscode.window.showWarningMessage(linter + " is already initialized! Open .linterhub.json to edit settings");
-				else
-				{
-					lc.sendRequest({ method: "CreateConfig" }, { Linter: value, Config: config_path });
-					vscode.window.showInformationMessage(linter + " is activated! Open .linterhub.json to edit settings");
-				}
-			});
-		}));
-
-		context.subscriptions.push(vscode.commands.registerCommand('linterhub.deactivate', () => {
-			if (!fs.existsSync(config_path)) {
-				let gen_conf =
-				{
-					mode: "docker",
-					linters: []
-				}
-				fs.writeFileSync(config_path, JSON.stringify(gen_conf, null, "\t"));
-			}
-			let conf = JSON.parse(fs.readFileSync(config_path, "utf-8"));
-			if(conf.linters.length == 0)
-			{
-				vscode.window.showWarningMessage("Can't find any active linters");
-			}
-			else 
-			{
-				let act_linters: string[] = [];
-				conf.linters.forEach(x => {
-					act_linters.push(x.name);
-				});
-				vscode.window.showQuickPick(linters).then(function(value: string){
-					let linter: string = value.charAt(0).toUpperCase() + value.slice(1);
-					let found: boolean = false;
-					let ind: Number = -1;
-					conf.linters.forEach(x => {
-						if(x.name == value)
-						{
-							found = true;
-							ind = conf.linters.indexOf(x);
-						}
-					})
-
-					if(found)
-					{
-						conf.linters.splice(ind, 1);
-						fs.writeFileSync(config_path, JSON.stringify(conf, null, "\t"));
-						vscode.window.showInformationMessage(linter + " is deactivated!");
-					}
-					else
-						vscode.window.showWarningMessage(linter + " is not initialized");
-				});
-			}
-		}));
-	}
+	}).then(() => {
+		integration.setupUi();
+		// Setup commands
+		context.subscriptions.push(
+			commands.registerCommand('linterhub.analyze', () => integration.analyze()),
+			commands.registerCommand('linterhub.analyzeFile', () => integration.analyzeFile()),
+			commands.registerCommand('linterhub.activate', () => integration.activate()),
+			commands.registerCommand('linterhub.deactivate', () => integration.deactivate()),
+			commands.registerCommand('linterhub.showOutput', () => integration.showOutput()),
+			integration.statusBarItem
+		);
+	});
 }
