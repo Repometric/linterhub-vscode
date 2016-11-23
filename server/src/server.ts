@@ -11,15 +11,25 @@ import {
 import { ActivateRequest, CatalogRequest, Status, StatusNotification } from './shared/ide.vscode'
 
 import * as path from 'path';
-import { Integration } from './shared/ide.vscode.server'
+import { Integration, Run } from './shared/ide.vscode.server'
 
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
 let documents: TextDocuments = new TextDocuments();
 let integration: Integration = null;
 
 documents.listen(connection);
-documents.onDidSave((change) => integration.analyzeFile(change.document.uri));
-documents.onDidOpen((change) => integration.analyzeFile(change.document.uri));
+
+documents.onDidOpen((event) => {
+	integration.analyzeFile(event.document.uri, event.document, Run.onOpen);
+});
+
+documents.onDidSave((event) => {
+	integration.analyzeFile(event.document.uri, event.document, Run.onSave);
+});
+
+documents.onDidClose((event) => {
+	integration.stopAnalysis(event.document.uri);
+});
 
 connection.onInitialize((params): InitializeResult => {
 	connection.console.info("SERVER: start.");

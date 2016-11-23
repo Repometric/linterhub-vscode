@@ -72,42 +72,17 @@ export class Event {
     }
 }
 
-export class Eventbus {
-    client: LanguageClient;
-    linters: string[] = null;
-    constructor(client: LanguageClient) {
-        this.client = client;
-    }
-    getLinters(): Promise<string[]> {
-        let promise = new Promise((resolve, reject) => {
-            let that = this;
-            if (this.linters == null) {
-                this.client.sendRequest(CatalogRequest, { }).then(x => {
-                    //that.linters = x.linters;
-                    resolve(x.linters);
-                });
-            } else {
-                resolve(this.linters);
-            }            
-        });
-
-        return promise;
-    }
-}
-
 export class Integration implements IUiIntegration  {
     client: LanguageClient;
     languages: string[];
     linters: string[];
     event: Event;
-    bus: Eventbus;
     constructor(client: LanguageClient) {
         this.client = client;
     }
     setClient(client: LanguageClient) {
         this.client = client;
         this.event = new Event(null, new Message(), new Log(client));
-        this.bus = new Eventbus(client);
     }
     analyze() {
 
@@ -116,10 +91,10 @@ export class Integration implements IUiIntegration  {
 
     }
     deactivate() {
-        this.bus.getLinters().then(x => this.deactivateByList(x));
+        this.client.sendRequest(CatalogRequest, { }).then(x => this.deactivateByList(x.linters));
     }
     activate() {
-        this.bus.getLinters().then(x => this.activateByList(x));
+        this.client.sendRequest(CatalogRequest, { }).then(x => this.activateByList(x.linters));
     }
     deactivateByList(linters: string[]) {
         let that = this;

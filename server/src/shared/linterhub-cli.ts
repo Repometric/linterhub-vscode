@@ -1,4 +1,4 @@
-import { execSync, exec, spawn } from "child_process";
+import { execSync, exec, spawn, ChildProcess } from "child_process";
 const Catalog = '--mode=catalog';
 const Version = '--mode=version';
 const Activate = "";
@@ -17,9 +17,10 @@ export class LinterhubCli {
         this.cli = 'dotnet ' + this.cliPath + ' ';
     }
     private execute(command: string): Promise<{}> {
+        // TODO: Return ChildProcess in order to stop analysis when document is closed
         let promise = new Promise((resolve, reject) => {
             // TODO: Use spawn and buffers.
-            exec(this.cli + command, { cwd: this.cliRoot, maxBuffer: 1024 * 1024 * 500 }, function (error, stdout, stderr) {
+            let process = exec(this.cli + command, { cwd: this.cliRoot, maxBuffer: 1024 * 1024 * 500 }, function (error, stdout, stderr) {
                 let execError = stderr.toString();
                 if (error) {
                     reject(new Error(error.message));

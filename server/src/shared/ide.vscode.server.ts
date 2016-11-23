@@ -4,9 +4,18 @@ import { Status, StatusNotification } from './ide.vscode'
 import { IConnection, NotificationType,
     Diagnostic, DiagnosticSeverity, Position, Range, Files, TextDocument } from 'vscode-languageserver';
 
+export enum Run {
+    none,
+    onStart,
+    onOpen,
+    onType,
+    onSave
+}
+
 export interface Settings {
 	linterhub: {
 		enable: boolean;
+        run: Run[];
 		cliPath: any;
 	}
 	[key: string]: any;
@@ -62,6 +71,7 @@ export class Integration implements IIntegration {
     }
     initialize(settings: Settings = null) {
         this.settings = settings;
+        this.settings.linterhub.run = [ Run.onOpen, Run.onSave ];
         this.linterhub = new LinterhubCli(this.settings.linterhub.cliPath, this.project);
         this.linters = new Cacheable(() => this.linterhub.catalog());
         this.version = new Cacheable(() => this.linterhub.version());
@@ -83,30 +93,22 @@ export class Integration implements IIntegration {
     analyze() {
         return this.run(this.linterhub.analyze(), this.project);
     }
-    analyzeFile(path: string, document: TextDocument = null) {
+    stopAnalysis(path: string) {
+        // TODO:
+    }
+    analyzeFile(path: string, document: TextDocument = null, run: Run = Run.none) {
+        if (this.settings.linterhub.run.indexOf(run) < 0) {
+            return;
+        }
+
         this.connection.console.info(`SERVER: analyze file '${path}'.`);
         return this.run(this.linterhub.analyzeFile(path), path).then((data: string) => {
             let json = JSON.parse(data);
             this.connection.console.info(`SERVER: finish analyze file '${path}'.`);
             json[0].Files.forEach(file => {
-                this.connection.console.info("SERVER: KEY " + file);
+                // TODO: Combine serveral linter results into 1
                 let diagnostics: Diagnostic[] = file.Errors.map(error => this.convertError(error));
-                this.connection.console.info("SERVER: diagnostic for " + file);
-                this.connection.sendDiagnostics({ uri: 'file://' + this.project + '/' + file.Path, diagnostics: diagnostics });
-            
-/*
-                let ind: number = document.uri.lastIndexOf('/');
-                let uri: string = document.uri.substr(0, ind + 1) + file.Path;
-                var fin = files;/*.filter(function(file){
-                    return file.Name == uri;
-                });
-                if(fin.length != 0){
-                    diagnostics.forEach(q => {
-                        files[files.lastIndexOf(fin[0])].Diagnostics.push(q);
-                    });
-                }
-                else
-                    files[files.length] = new File(uri, diagnostics);*/
+                this.connection.sendDiagnostics({ uri: 'file://' + this.project + '/' + file.Path, diagnostics: diagnostics });      
             });
 
             files.forEach(x => { 
