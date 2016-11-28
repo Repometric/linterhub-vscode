@@ -18,12 +18,29 @@
   "contributes": {
     "commands": [
       {
+        "category": "Linterhub",
         "command": "linterhub.activate",
         "title": "Activate linter"
       },
       {
+        "category": "Linterhub",
         "command": "linterhub.deactivate",
         "title": "Deactivate linter"
+      },
+      {
+        "category": "Linterhub",
+        "command": "linterhub.analyze",
+        "title": "Analyze project"
+      },
+      {
+        "category": "Linterhub",
+        "command": "linterhub.analyzeFile",
+        "title": "Analyze file"
+      },
+      {
+        "category": "Linterhub",
+        "command": "linterhub.showOutput",
+        "title": "Show output"
       }
     ],
     "configuration": {

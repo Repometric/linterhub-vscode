@@ -1,55 +1,100 @@
 import { execSync, exec, spawn, ChildProcess } from "child_process";
-const Catalog = '--mode=catalog';
-const Version = '--mode=version';
-const Activate = "";
-const Deactivate = "";
-const Analyze = "--mode=analyze --project={1}";
+import { executeChildProcess, Cacheable } from './util'
+import * as path from 'path';
 
-export class LinterhubCli {
-    cliRoot: string;
-    cliPath: string;
-    cli: string;
-    project: string;
-    constructor(cliRoot: string, project: string) {
+export enum LinterhubMode {
+    dotnet,
+    native,
+    docker
+}
+
+export class LinterhubArgs {
+    private cliRoot: string;
+    private cliPath: string;
+    private project: string;
+    private mode: LinterhubMode;
+    constructor(cliRoot: string, project: string, mode: LinterhubMode = LinterhubMode.dotnet) {
         this.project = project;
         this.cliRoot = cliRoot;
-        this.cliPath = cliRoot + 'cli.dll';
-        this.cli = 'dotnet ' + this.cliPath + ' ';
+        this.mode = mode;
+        this.cliPath = this.prefix() + ' ';
+    }
+    private prefix(): string {
+        switch (this.mode) {
+            case LinterhubMode.dotnet:
+                return 'dotnet ' + path.join(this.cliRoot, 'cli.dll');
+            case LinterhubMode.native:
+                return path.join(this.cliRoot, 'cli');
+            case LinterhubMode.docker:
+                return 'TODO';
+        }
+
+        return 'unknown';
+    }
+    analyze(): string {
+        return this.cliPath + `--mode=analyze --project=${this.project} --linter=jshint`;
+    }
+    analyzeFile(file: string): string {
+        return this.cliPath + `--mode=analyze --project=${this.project} --file=${file}`;
+    }
+    activate(linter: string): string {
+        return this.cliPath + `--mode=activate --project=${this.project} --active=true --linter=${linter}`;
+    }
+    deactivate(linter: string): string {
+        return this.cliPath + `--mode=activate --project=${this.project} --active=false --linter=${linter}`;
+    }
+    catalog(): string {
+        return this.cliPath + `--mode=catalog`;
+    }
+    version(): string {
+        return this.cliPath + `--mode=version`;
+    }
+}
+
+export class LinterhubCli {
+    private args: LinterhubArgs;
+    private cliRoot: string;
+    constructor(cliRoot: string, project: string, mode: LinterhubMode = LinterhubMode.dotnet) {
+        this.args = new LinterhubArgs(cliRoot, project, mode);
+        this.cliRoot = cliRoot;
     }
     private execute(command: string): Promise<{}> {
         // TODO: Return ChildProcess in order to stop analysis when document is closed
-        let promise = new Promise((resolve, reject) => {
-            // TODO: Use spawn and buffers.
-            let process = exec(this.cli + command, { cwd: this.cliRoot, maxBuffer: 1024 * 1024 * 500 }, function (error, stdout, stderr) {
-                let execError = stderr.toString();
-                if (error) {
-                    reject(new Error(error.message));
-                } else if (execError !== '') {
-                    reject(new Error(execError));
-                } else {
-                    resolve(stdout);
-                }
-            });
-        });
-
-        return promise;
+        return executeChildProcess(command, this.cliRoot);
     }
     analyze(): Promise<{}> {
-        return this.execute(Version);
+        return this.execute(this.args.analyze());
     }
-    analyzeFile(path: string): Promise<{}> {
-        return this.execute(`--mode=analyze --project=${this.project} --linter=jshint`);
+    analyzeFile(file: string): Promise<{}> {
+        //return this.execute(this.args.analyzeFile(file));
+        return this.execute(this.args.analyze());
     }
     catalog(): Promise<{}> {
-        return this.execute(Catalog);
+        return this.execute(this.args.catalog());
     }
     activate(linter: string): Promise<{}> {
-        return this.execute(Version);;
+        return this.execute(this.args.activate(linter));
     }
     deactivate(linter: string): Promise<{}> {
-        return this.execute(Version);;
+        return this.execute(this.args.deactivate(linter));;
     }
     version() {
-        return this.execute(Version);
+        return this.execute(this.args.version());
+    }
+}
+
+export class LinterhubCliLazy extends LinterhubCli {
+    private catalogValue: Cacheable;
+    private versionValue: Cacheable;
+    constructor(cliRoot: string, project: string, mode: LinterhubMode = LinterhubMode.dotnet) {
+        super(cliRoot, project, mode);
+        this.catalogValue = new Cacheable(() => super.catalog());
+        this.versionValue = new Cacheable(() => super.version());
+    }
+    catalog() {
+        return this.catalogValue.getValue();
+    }
+    version() {
+        return this.versionValue.getValue();
     }
 }

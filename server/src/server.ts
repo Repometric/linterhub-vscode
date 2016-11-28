@@ -8,8 +8,9 @@ import {
 	Command,
 	ErrorMessageTracker, IPCMessageReader, IPCMessageWriter
 } from 'vscode-languageserver';
-import { ActivateRequest, CatalogRequest, Status, StatusNotification } from './shared/ide.vscode'
+import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification } from './shared/ide.vscode'
 
+import { PlatformInformation } from './shared/platform'
 import * as path from 'path';
 import { Integration, Run } from './shared/ide.vscode.server'
 
@@ -33,7 +34,7 @@ documents.onDidClose((event) => {
 
 connection.onInitialize((params): InitializeResult => {
 	connection.console.info("SERVER: start.");
-	integration = new Integration(params.rootPath, connection);
+	integration = new Integration(params.rootPath, connection)
 	return {
 		capabilities: {
 			textDocumentSync: documents.syncKind
@@ -47,6 +48,7 @@ connection.onShutdown((params) => {
 
 connection.onDidChangeConfiguration((params) => {
 	connection.console.info("SERVER: initialize.");
+
 	integration.initialize(params.settings).then(version => {
 		connection.console.info("SERVER: " + version.toString().replace(/(?:\r\n|\r|\n)/g, ', '));
 	}).catch(function (reason) {
@@ -73,18 +75,15 @@ connection.onRequest(ActivateRequest, (params) => {
 	}
 });
 
-connection.listen();
-
-class File
-{
-	Name: string;
-	Diagnostics: Diagnostic[];
-	constructor (name: string, diagn: Diagnostic[])
-	{
-		this.Name = name;
-		this.Diagnostics = diagn;
+connection.onRequest(AnalyzeRequest, (params) => {
+	if (params.full) {
+		return integration.analyze();
+	} else {
+		return integration.analyzeFile(params.path, null, Run.force);
 	}
-}
+});
+
+connection.listen();
 
 function validateProject(document: TextDocument): void {
 	let files: File[] = [];
