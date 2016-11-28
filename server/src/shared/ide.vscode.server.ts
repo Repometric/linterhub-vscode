@@ -19,7 +19,6 @@ export interface Settings {
 	linterhub: {
 		enable: boolean;
         run: Run[];
-        mode
 		cliPath: any;
 	}
 	[key: string]: any;
