@@ -45,7 +45,7 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "ESLint",
+      "title": "linterhub",
       "properties": {
         "linterhub.enable": {
           "type": "boolean",
@@ -56,6 +56,15 @@
           "type": "string",
           "default": "/Volumes/Repositories/Repometric/linterhub-cli/src/cli/bin/Debug/netstandard1.6/osx.10.11-x64/publish/",
           "description": "A path of Linterhub CLI."
+        },
+        "linterhub.run": {
+          "type": "array",
+          "items": {
+              "type": "string",
+              "enum": [ "onStart", "onOpen", "onType", "onSave"]
+          },
+          "default": [ "onStart", "onOpen", "onSave" ],
+          "description": "Run type."
         }
       }
     }

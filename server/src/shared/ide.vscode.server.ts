@@ -53,12 +53,11 @@ export class Integration implements IIntegration {
     }
     initialize(settings: Settings = null) {
         this.settings = settings;
-        this.settings.linterhub.run = [ Run.onOpen, Run.onSave ];
+        this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
         this.linterhub = new LinterhubCliLazy(this.settings.linterhub.cliPath, this.project);
         this.onReady = this.linterhub.version().catch(e => {
             this.connection.console.error(e.toString());
         });
-
         return this.onReady;
     }
     private run(action: () => Promise<{}>, id: string, before: string = null, after: string = null): Promise<{}> {
