@@ -71,7 +71,7 @@ export class Integration implements IIntegration {
             return this.connection.console.error(reason.toString());
         })      
     }
-    stopAnalysis() {
+    stopAnalysis(path: string) {
         // TODO
     }
     analyze() {
