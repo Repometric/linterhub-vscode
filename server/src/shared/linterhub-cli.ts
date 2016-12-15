@@ -35,7 +35,11 @@ export class LinterhubArgs {
         return this.cliPath + `--mode=analyze --project=${this.project} --linter=jshint`;
     }
     analyzeFile(file: string): string {
-        return this.cliPath + `--mode=analyze --project=${this.project} --file=${file}`;
+        // TODO: Improve this code.
+        let normalizedPath = file.replace('file://', '')
+            .replace(this.project + '/', '')
+            .replace(this.project + '\\', '');
+        return this.cliPath + `--mode=analyze --project=${this.project} --file=${normalizedPath}`;
     }
     activate(linter: string): string {
         return this.cliPath + `--mode=activate --project=${this.project} --active=true --linter=${linter}`;

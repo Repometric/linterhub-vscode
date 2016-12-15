@@ -3,7 +3,7 @@
   "description": "Linterhub extension",
   "author": "Repometric",
   "license": "MIT",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "publisher": "Repometric",
   "engines": {
     "vscode": "^1.4.0"
@@ -69,7 +69,7 @@
         "linterhub.mode": {
           "type": "string",
           "enum": [ "dotnet", "native", "docker" ],
-          "default": "native",
+          "default": "dotnet",
           "description": "Run mode."
         }
       }
