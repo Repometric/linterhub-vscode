@@ -63,8 +63,14 @@
               "type": "string",
               "enum": [ "onStart", "onOpen", "onType", "onSave"]
           },
-          "default": [ "onStart", "onOpen", "onSave" ],
+          "default": [ "onOpen", "onSave" ],
           "description": "Run type."
+        },
+        "linterhub.mode": {
+          "type": "string",
+          "enum": [ "dotnet", "native", "docker" ],
+          "default": "native",
+          "description": "Run mode."
         }
       }
     }

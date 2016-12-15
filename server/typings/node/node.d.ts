@@ -1317,6 +1317,7 @@ declare module "fs" {
         flags?: string;
         encoding?: string;
         string?: string;
+        mode?: number;
     }): WriteStream;
 }
 

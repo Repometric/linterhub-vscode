@@ -1,3 +1,0 @@
-[submodule "client/repometric/linterhub-cli"]
-	path = client/repometric/linterhub-cli
-	url = https://github.com/Repometric/linterhub-cli

@@ -54,20 +54,22 @@ export class LinterhubArgs {
 export class LinterhubCli {
     private args: LinterhubArgs;
     private cliRoot: string;
-    constructor(cliRoot: string, project: string, mode: LinterhubMode = LinterhubMode.dotnet) {
+    private log: any;
+    constructor(log: any, cliRoot: string, project: string, mode: LinterhubMode = LinterhubMode.dotnet) {
         this.args = new LinterhubArgs(cliRoot, project, mode);
         this.cliRoot = cliRoot;
+        this.log = log;
     }
     private execute(command: string): Promise<{}> {
         // TODO: Return ChildProcess in order to stop analysis when document is closed
+        this.log.info('Execute command: ' + command);
         return executeChildProcess(command, this.cliRoot);
     }
     analyze(): Promise<{}> {
         return this.execute(this.args.analyze());
     }
     analyzeFile(file: string): Promise<{}> {
-        //return this.execute(this.args.analyzeFile(file));
-        return this.execute(this.args.analyze());
+        return this.execute(this.args.analyzeFile(file));
     }
     catalog(): Promise<{}> {
         return this.execute(this.args.catalog());
@@ -86,8 +88,8 @@ export class LinterhubCli {
 export class LinterhubCliLazy extends LinterhubCli {
     private catalogValue: Cacheable;
     private versionValue: Cacheable;
-    constructor(cliRoot: string, project: string, mode: LinterhubMode = LinterhubMode.dotnet) {
-        super(cliRoot, project, mode);
+    constructor(log: any, cliRoot: string, project: string, mode: LinterhubMode = LinterhubMode.dotnet) {
+        super(log, cliRoot, project, mode);
         this.catalogValue = new Cacheable(() => super.catalog());
         this.versionValue = new Cacheable(() => super.version());
     }

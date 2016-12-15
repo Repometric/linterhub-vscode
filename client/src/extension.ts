@@ -10,26 +10,11 @@ import {
 	ErrorAction, CloseAction, ResponseError, InitializeError, ErrorCodes, State as ClientState,
 	Protocol2Code, ServerOptions
 } from 'vscode-languageclient';
-import * as fs from 'fs';
-import { spawn, execSync, exec } from "child_process";
-//import { Linterhub } from "./notificator";
-/*
-import { execSync, exec } from "child_process";
-import * as vscode from 'vscode';
-import {
-	LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind,
-	TextDocumentIdentifier, TextEdit, NotificationType, ErrorHandler,
-	ErrorAction, CloseAction, ResponseError, InitializeError, ErrorCodes, State as ClientState,
-	Protocol2Code
-} from 'vscode-languageclient';
-import { window, commands, languages, Command, Uri, StatusBarAlignment, TextEditor } from 'vscode';
-*/
 import * as ide from './shared/ide'
 import { StatusNotification } from './shared/ide.vscode'
 import { Integration } from './shared/ide.vscode.client'
 
 export function activate(context: ExtensionContext) {
-	//let event = new Linterhub.Ide.Vscode.Event(client, vscode.window);
 	let integration = new Integration(null);
 	integration.initialize().then(() => {
 		// Setup and start client
@@ -51,7 +36,6 @@ export function activate(context: ExtensionContext) {
 		integration.setupUi();
 		// Setup events
 		client.onNotification(StatusNotification, (params) => integration.updateStatus(params));
-
 		let disposable = client.start();
 		context.subscriptions.push(disposable);
 	}).then(() => {
