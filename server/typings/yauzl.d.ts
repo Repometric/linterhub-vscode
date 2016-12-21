@@ -31,9 +31,9 @@ declare module 'yauzl' {
 	}
 
 	export class ZipFile extends EventEmitter {
-		openReadStream(entry: Entry, callback: (err?: Error, stream?: Readable) => void);
-		readEntry();
-		close();
+		openReadStream(entry: Entry, callback: (err?: Error, stream?: Readable) => void): any;
+		readEntry(): any;
+		close(): any;
 		isOpen: boolean;
 		entryCount: number;
 		comment: string;

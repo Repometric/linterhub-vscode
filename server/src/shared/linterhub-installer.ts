@@ -9,25 +9,25 @@ import { PlatformInformation } from './platform'
 import { mkdirp } from 'mkdirp';
 import * as yauzl from 'yauzl';
 
-export function install(mode: LinterhubMode, proxy: string, strictSSL: boolean, log: any) {
+export function install(mode: LinterhubMode, folder: string, proxy: string, strictSSL: boolean, log: any) : Promise<string> {
     // TODO
     if (mode == LinterhubMode.docker) {
         return downloadDock("repometric/linterhub-cli");
     } else {
         return PlatformInformation.GetCurrent().then(info => {
             log.info("Platform: " + info.toString());
-            let url = mode == LinterhubMode.native ? buildPackageUrl(info) : "https://github.com/Repometric/linterhub-cli/releases/download/0.1/linterhub-cli-dotnet-0.1.zip";
+            let url = mode == LinterhubMode.native ? buildPackageUrl(/*info*/) : "https://github.com/Repometric/linterhub-cli/releases/download/0.2/linterhub-cli-osx.10.11-x64-0.2.zip";
             log.info("URL: " + url);
-            /*return downloadFile(url, proxy, strictSSL).then(x => {
-                log.info("File downloaded");*/
-                return installFile('/Volumes/Repositories/Repometric/temp.zip', log);
-            //});
+            return downloadFile(url, folder + "temp.zip", proxy, strictSSL).then(() => {
+                log.info("File downloaded");
+                return installFile(folder + "temp.zip", folder, log);
+            });
         });
     }
 }
 
-function installFile(pathx: string, log: any) {
-    return new Promise<void>((resolve, reject) => {
+function installFile(pathx: string, folder: any, log: any) {
+    return new Promise<string>((resolve, reject) => {
 
         yauzl.open(pathx, { autoClose: true, lazyEntries: true }, (err, zipFile) => {
             if (err) {
@@ -38,7 +38,7 @@ function installFile(pathx: string, log: any) {
 
             zipFile.on('entry', (entry: yauzl.Entry) => {
                 let absoluteEntryPath = path.resolve(/*getBaseInstallPath(pkg)*/
-                '/Volumes/Repositories/Repometric/install/', entry.fileName);
+                folder, entry.fileName);
 
                 if (entry.fileName.endsWith('/')) {
                     // Directory - create it
@@ -75,10 +75,10 @@ function installFile(pathx: string, log: any) {
             });
 
             zipFile.on('end', () => {
-                resolve();
+                resolve( path.resolve(folder, 'bin', 'osx.10.11-x64') );
             });
 
-            zipFile.on('error', err => {
+            zipFile.on('error', (err: any) => {
                 log.error(err.toString());
                 reject(new Error('Zip File Error:' + err.code || ''));
             });
@@ -87,18 +87,7 @@ function installFile(pathx: string, log: any) {
 
 }
 
-const packages = [
-    {
-        "Version": "0.2",
-        "Platforms": [
-            { "system": "linux", "platform": "debian.8-x64" },
-            { "system": "macos", "platform": "osx.10.11-x64" },
-            { "system": "windows", "platform": "win10-x64" }
-        ]
-    }
-];
-
-function buildPackageUrl(info: PlatformInformation, proxy: string = null, strictSSL: boolean = false): string {
+function buildPackageUrl(/*info: PlatformInformation, proxy: string = null, strictSSL: boolean = false*/): string {
     /*let releasesUrl = "https://api.github.com/repos/repometric/linterhub-cli/releases";
     let promise = downloadJson(releasesUrl, proxy, strictSSL).then(data => {
         let json = JSON.parse(data);
@@ -107,11 +96,12 @@ function buildPackageUrl(info: PlatformInformation, proxy: string = null, strict
     })
     return promise;*/
     // TODO: Improve this logic.
-    let arch = info.architecture == "x86_64" ? "64" : "86";
+    /*let arch = info.architecture == "x86_64" ? "64" : "86";
     let version = "0.2"
     let platform = info.isMacOS() ? "osx.10.11-x64" : info.isWindows() ? "win10-x64" : "debian.8-x64" ;
     let template = "https://github.com/Repometric/linterhub-cli/releases/download/${version}/linterhub-cli-${platform}-${version}.zip";
-    return template;
+    return template;*/
+    return "https://github.com/Repometric/linterhub-cli/releases/download/0.2/linterhub-cli-osx.10.11-x64-0.2.zip";
 }
 
 export function getDockerVersion() {
@@ -126,11 +116,11 @@ function removeNewLine(out: string): string {
     return out.replace('\n', '').replace('\r', '');
 }
 
-export function downloadDock(name: string): Promise<void> {
+export function downloadDock(name: string): Promise<string> {
     return executeChildProcess("docker pull " + name);
 }
 
-export function downloadContent(urlString, proxy: string, strictSSL: boolean): Promise<string> {
+export function downloadContent(urlString: any, proxy: string, strictSSL: boolean): Promise<string> {
     const url = parseUrl(urlString);
     const options: https.RequestOptions = {
         host: url.host,
@@ -151,13 +141,13 @@ export function downloadContent(urlString, proxy: string, strictSSL: boolean): P
             });
 
             response.on('error', err => {
-                reject(new Error(err));
+                reject(new Error(err.message));
             });
         })
     });
 }
 
-export function downloadFile(urlString: string, path: string, proxy: string, strictSSL: boolean): Promise<void> {
+export function downloadFile(urlString: string, pathx: string, proxy: string, strictSSL: boolean): Promise<string> {
     const url = parseUrl(urlString);
 
     const options: https.RequestOptions = {
@@ -167,11 +157,11 @@ export function downloadFile(urlString: string, path: string, proxy: string, str
         rejectUnauthorized: strictSSL
     };
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<string>((resolve, reject) => {
         let request = https.request(options, response => {
             if (response.statusCode === 301 || response.statusCode === 302) {
                 // Redirect - download from new location
-                return resolve(downloadFile(response.headers.location, path, proxy, strictSSL));
+                return resolve(downloadFile(response.headers.location, pathx, proxy, strictSSL));
             }
 
             if (response.statusCode != 200) {
@@ -182,7 +172,7 @@ export function downloadFile(urlString: string, path: string, proxy: string, str
             let packageSize = parseInt(response.headers['content-length'], 10);
             let downloadedBytes = 0;
             let downloadPercentage = 0;
-            let tmpFile = fs.createWriteStream(path);
+            let tmpFile = fs.createWriteStream(pathx);
 
             response.on('data', data => {
                 downloadedBytes += data.length;
@@ -199,7 +189,7 @@ export function downloadFile(urlString: string, path: string, proxy: string, str
             });
 
             response.on('error', err => {
-                reject(new Error(err));
+                reject(new Error(err.message));
             });
 
             // Begin piping data from the response to the package file
@@ -207,7 +197,7 @@ export function downloadFile(urlString: string, path: string, proxy: string, str
         });
 
         request.on('error', error => {
-            reject(new Error(error));
+            reject(new Error(error.message));
         });
 
         // Execute the request

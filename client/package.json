@@ -54,21 +54,33 @@
         },
         "linterhub.cliPath": {
           "type": "string",
-          "default": "/Volumes/Repositories/Repometric/linterhub-cli/src/cli/bin/Debug/netstandard1.6/osx.10.11-x64/publish/",
+          "default": "/Volumes/Repositories/Repometric/linterhub-cli/src/cli/bin/",
           "description": "A path of Linterhub CLI."
         },
         "linterhub.run": {
           "type": "array",
           "items": {
-              "type": "string",
-              "enum": [ "onStart", "onOpen", "onType", "onSave"]
+            "type": "string",
+            "enum": [
+              "onStart",
+              "onOpen",
+              "onType",
+              "onSave"
+            ]
           },
-          "default": [ "onOpen", "onSave" ],
+          "default": [
+            "onOpen",
+            "onSave"
+          ],
           "description": "Run type."
         },
         "linterhub.mode": {
           "type": "string",
-          "enum": [ "dotnet", "native", "docker" ],
+          "enum": [
+            "dotnet",
+            "native",
+            "docker"
+          ],
           "default": "dotnet",
           "description": "Run mode."
         }
@@ -81,11 +93,11 @@
     "postinstall": "node ./node_modules/vscode/bin/install"
   },
   "devDependencies": {
-    "typescript": "^1.8.9",
-    "vscode": "^0.11.0"
+    "typescript": "^2.0.3",
+    "vscode": "^1.0.0",
+    "@types/node": "^6.0.40"
   },
   "dependencies": {
-    "elegant-spinner": "^1.0.1",
-    "vscode-languageclient": "^2.2.1"
+    "vscode-languageclient": "^2.6.3"
   }
 }

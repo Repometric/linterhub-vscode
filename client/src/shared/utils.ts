@@ -15,7 +15,7 @@ export function progress(): string {
 }
 
 export class Progress {
-    private id: number;
+    private id: NodeJS.Timer;
     private interval: number;
     private progressStep: ProgressStep;
     private callback: (step: string) => void;

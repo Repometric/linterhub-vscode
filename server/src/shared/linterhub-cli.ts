@@ -1,4 +1,3 @@
-import { execSync, exec, spawn, ChildProcess } from "child_process";
 import { executeChildProcess, Cacheable } from './util'
 import * as path from 'path';
 

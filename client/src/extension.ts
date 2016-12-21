@@ -1,16 +1,9 @@
 'use strict';
 
 import * as path from 'path';
-import * as vscode from 'vscode';
-import { workspace, Disposable, ExtensionContext } from 'vscode';
-import { window, commands, languages, Command, Uri, StatusBarAlignment, TextEditor } from 'vscode';
-import {
-	LanguageClient, LanguageClientOptions, SettingMonitor, RequestType, TransportKind,
-	TextDocumentIdentifier, TextEdit, NotificationType, ErrorHandler,
-	ErrorAction, CloseAction, ResponseError, InitializeError, ErrorCodes, State as ClientState,
-	Protocol2Code, ServerOptions
-} from 'vscode-languageclient';
-import * as ide from './shared/ide'
+import { workspace, ExtensionContext } from 'vscode';
+import { window, commands } from 'vscode';
+import { LanguageClient, LanguageClientOptions, TransportKind, ServerOptions } from 'vscode-languageclient';
 import { StatusNotification } from './shared/ide.vscode'
 import { Integration } from './shared/ide.vscode.client'
 
@@ -32,21 +25,26 @@ export function activate(context: ExtensionContext) {
 			}
 		};
 		let client = new LanguageClient('Linterhub', serverOptions, clientOptions);
-		integration.setClient(client);
-		integration.setupUi();
-		// Setup events
-		client.onNotification(StatusNotification, (params) => integration.updateStatus(params));
 		let disposable = client.start();
-		context.subscriptions.push(disposable);
-	}).then(() => {
-		// Setup commands
-		context.subscriptions.push(
-			commands.registerCommand('linterhub.analyze', () => integration.analyze()),
-			commands.registerCommand('linterhub.analyzeFile', () => integration.analyzeFile(window.activeTextEditor.document.uri.toString())),
-			commands.registerCommand('linterhub.activate', () => integration.activate()),
-			commands.registerCommand('linterhub.deactivate', () => integration.deactivate()),
-			commands.registerCommand('linterhub.showOutput', () => integration.showOutput()),
-			integration.statusBarItem
-		);
+		
+		return client.onReady().then(() => {
+			integration.setClient(client);
+			integration.setupUi();
+
+			context.subscriptions.push(
+				commands.registerCommand('linterhub.analyze', () => integration.analyze()),
+				commands.registerCommand('linterhub.analyzeFile', () => integration.analyzeFile(window.activeTextEditor.document.uri.toString())),
+				commands.registerCommand('linterhub.activate', () => integration.activate()),
+				commands.registerCommand('linterhub.deactivate', () => integration.deactivate()),
+				commands.registerCommand('linterhub.showOutput', () => integration.showOutput()),
+				integration.statusBarItem,
+				disposable
+			);
+			
+			integration.setClient(client);
+			integration.setupUi();
+			// Setup events
+			client.onNotification(StatusNotification, (params) => integration.updateStatus(params));
+		});
 	});
 }

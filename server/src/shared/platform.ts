@@ -186,7 +186,7 @@ export class PlatformInformation {
                 }
 
                 return unknown;
-            }).catch((error) => {
+            }).catch(() => {
                 return unknown;
             });
     }

@@ -1,20 +1,16 @@
 
 import {
 	createConnection, IConnection,
-	ResponseError, RequestType, RequestHandler, NotificationType, NotificationHandler,
-	InitializeResult, InitializeError,
-	Diagnostic, DiagnosticSeverity, Position, Range, Files,
-	TextDocuments, TextDocument, TextDocumentSyncKind, TextEdit, TextDocumentIdentifier,
-	Command,
-	ErrorMessageTracker, IPCMessageReader, IPCMessageWriter
+	InitializeResult,
+	TextDocuments,
+	IPCMessageReader, IPCMessageWriter
 } from 'vscode-languageserver';
-import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification } from './shared/ide.vscode'
+import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification } from './shared/ide.vscode'
 
-import { PlatformInformation } from './shared/platform'
-import * as path from 'path';
 import { Integration, Run } from './shared/ide.vscode.server'
 
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
+
 let documents: TextDocuments = new TextDocuments();
 let integration: Integration = null;
 
@@ -28,8 +24,8 @@ documents.onDidSave((event) => {
 	integration.analyzeFile(event.document.uri, event.document, Run.onSave);
 });
 
-documents.onDidClose((event) => {
-	integration.stopAnalysis(event.document.uri);
+documents.onDidClose(() => {
+	//integration.stopAnalysis(event.document.uri);
 });
 
 connection.onInitialize((params): InitializeResult => {
@@ -42,7 +38,7 @@ connection.onInitialize((params): InitializeResult => {
 	}
 });
 
-connection.onShutdown((params) => {
+connection.onShutdown(() => {
 	connection.console.info("SERVER: stop.");
 });
 
@@ -58,7 +54,7 @@ connection.onDidChangeConfiguration((params) => {
 	});
 });
 
-connection.onRequest(CatalogRequest, (params) => {
+connection.onRequest(CatalogRequest, () => {
 	connection.console.info("SERVER: get catalog.");
 	return integration.catalog().then(linters => {
 		return { linters: linters };
@@ -83,83 +79,11 @@ connection.onRequest(AnalyzeRequest, (params) => {
 	}
 });
 
-connection.listen();
+connection.onRequest(InstallRequest, () => {
+	connection.console.info("SERVER: install cli.");
+	return integration.install().then((value) => { 
+		return { path: value }
+	});
+});
 
-function validateProject(document: TextDocument): void {
-	let files: File[] = [];
-	//let conf = JSON.parse(fs.readFileSync(workspaceRoot + "/.linterhub.json", "utf-8"));
-	setTimeout(function () {
-		connection.console.info('Send PE');
-		connection.sendNotification(StatusNotification, { state: Status.progressEnd });
-	}, 10000);
-	connection.console.info('Send PS');
-	connection.sendNotification(StatusNotification, { state: Status.progressStart });
-	/*
-	for(let lint of conf.linters) {
-		let linter_name: string = lint.name; 
-		setStatusBar("execute " + linter_name);
-		exec("dotnet " + cli_path + " --mode=Analyze --linter=" + linter_name + " --project=" + workspaceRoot,
-		{
-			cwd: cli_root
-		},
-		function(error, stdout, stderr) {
-			if (error) {
-				setStatusBar(`exec error: ${error}`);
-				return;
-			}
-			if(stderr.toString() == ""){
-				try
-				{
-					var res = JSON.parse(stdout.toString());
-					res.Files.forEach(x => {
-						let diagnostics: Diagnostic[] = [];
-						x.Errors.forEach(y => {
-							let Severity = DiagnosticSeverity.Warning;
-							switch(Number(y.Severity))
-							{
-								case 0: Severity = DiagnosticSeverity.Error; break;
-								case 1: Severity = DiagnosticSeverity.Warning; break;
-								case 2: Severity = DiagnosticSeverity.Information; break;
-								case 3: Severity = DiagnosticSeverity.Hint; break;
-							}
-							diagnostics.push({
-								severity: Severity,
-								range: {
-									start: { line: y.Row.Start, character: y.Column.Start},
-									end: { line: y.Row.End, character: y.Column.End }
-								},
-								message: y.Message,
-								source: linter_name
-							});
-						});
-						let ind: number = document.uri.lastIndexOf('/');
-						let uri: string = document.uri.substr(0, ind + 1) + x.Path;
-						var fin = files.filter(function(file){
-							return file.Name == uri;
-						});
-						if(fin.length != 0){
-							diagnostics.forEach(q => {
-								files[files.lastIndexOf(fin[0])].Diagnostics.push(q);
-							});
-						}
-						else
-							files[files.length] = new File(uri, diagnostics);
-					});
-				}
-				catch(err)
-				{
-					setStatusBar("catch some errors while parsing " + linter_name + "'s stdout");
-				}
-				files.forEach(x => {
-					connection.sendDiagnostics({ uri: x.Name, diagnostics: x.Diagnostics });
-				});
-				setStatusBar("ready");
-			}
-			else
-			{
-				setStatusBar(stderr.toString());
-			}
-		});
-	}
-	*/
-}
+connection.listen();

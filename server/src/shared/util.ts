@@ -4,7 +4,7 @@ export function executeChildProcess(command: string, workingDirectory: string = 
     // TODO: Return ChildProcess in order to stop it when needed
     let promise = new Promise((resolve, reject) => {
         // TODO: Use spawn and buffers.
-        let process = cp.exec(command, { cwd: workingDirectory, maxBuffer: 1024 * 1024 * 500 }, function (error, stdout, stderr) {
+        cp.exec(command, { cwd: workingDirectory, maxBuffer: 1024 * 1024 * 500 }, function (error, stdout, stderr) {
             let execError = stderr.toString();
             if (error) {
                 reject(new Error(error.message));

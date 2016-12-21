@@ -1,12 +1,10 @@
 export interface IIntegration {
-    initialize();
-    analyze();
-    analyzeFile(path: string);
-    activate(linter: string);
-    deactivate(linter: string);
+    initialize(): Promise<{}>;
+    analyze(): Thenable<void>;
+    analyzeFile(path: string): Thenable<void>;
 }
 
 export interface IUiIntegration extends IIntegration {
-    activate();
-    deactivate();
+    activate(): Thenable<string>;
+    deactivate(): Thenable<string>;
 }

@@ -1,9 +1,7 @@
 import { IIntegration } from './ide'
 import { LinterhubCliLazy, LinterhubMode } from './linterhub-cli'
 import { Status, StatusNotification } from './ide.vscode'
-import { IConnection, NotificationType, Diagnostic, DiagnosticSeverity, Position, Range, Files, TextDocument } from 'vscode-languageserver';
-import { PlatformInformation } from './platform'
-import { Cacheable, executeChildProcess }  from './util'
+import { IConnection, Diagnostic, DiagnosticSeverity, TextDocument } from 'vscode-languageserver';
 import * as i from "./linterhub-installer"
 import * as path from 'path';
 
@@ -36,8 +34,6 @@ class FileResult
 	}
 }
 
-let files: File[];
-
 export class Integration implements IIntegration {
     private systemId: string = "_system";
     private linterhub: LinterhubCliLazy;
@@ -46,7 +42,6 @@ export class Integration implements IIntegration {
     private project: string;
 
     private onReady: Promise<{}>;
-    private platform: PlatformInformation;
 
     constructor(project: string, connection: IConnection) {
         this.project = project;
@@ -55,23 +50,18 @@ export class Integration implements IIntegration {
     initialize(settings: Settings = null) {
 
         this.settings = settings;
+        
         this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
         this.settings.linterhub.mode = LinterhubMode[this.settings.linterhub.mode.toString()];
         this.linterhub = new LinterhubCliLazy(this.connection.console, this.settings.linterhub.cliPath, this.project, this.settings.linterhub.mode);
-        this.onReady = this.linterhub.version().catch(e => {
-            this.connection.console.error(e.toString());
-            
-            let path_cli = path.resolve(__dirname);
-            this.connection.console.warn(path_cli);
-
-            /*const config = vscode.workspace.getConfiguration();
-            const proxy = config.get<string>('http.proxy');
-            const strictSSL = config.get('http.proxyStrictSSL', true);*/
-            this.onReady = i.install(this.settings.linterhub.mode, null, true, this.connection.console);
-        });
 
         let path_cli = path.resolve(__dirname);
         this.connection.console.warn(path_cli);
+        this.onReady = this.linterhub.version();
+        return this.onReady;
+        /*const config = vscode.workspace.getConfiguration();
+        const proxy = config.get<string>('http.proxy');
+        const strictSSL = config.get('http.proxyStrictSSL', true);*/
 
         /*const config = vscode.workspace.getConfiguration();
         const proxy = config.get<string>('http.proxy');
@@ -83,9 +73,8 @@ export class Integration implements IIntegration {
             this.connection.console.info('installed!');
         });
 */
-        return this.onReady;
     }
-    private run(action: () => Promise<{}>, id: string, before: string = null, after: string = null): Promise<{}> {
+    private run(action: () => Promise<{}>, id: string): Promise<{}> {
         var that = this;
         that.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: id });
         return action().then((result) => {
@@ -95,12 +84,9 @@ export class Integration implements IIntegration {
             return this.connection.console.error(reason.toString());
         })      
     }
-    stopAnalysis(path: string) {
-        // TODO
-    }
     analyze() {
         if (this.settings.linterhub.run.indexOf(Run.onStart) < 0) {
-            return;
+            return null;
         }
 
         return this.onReady
@@ -113,7 +99,7 @@ export class Integration implements IIntegration {
     }
     analyzeFile(path: string, document: TextDocument = null, run: Run = Run.none) {
         if (this.settings.linterhub.run.indexOf(run) < 0) {
-            return;
+            return document;
         }
 
         return this.onReady
@@ -140,16 +126,24 @@ export class Integration implements IIntegration {
     deactivate(name: string) {
         return this.run(() => this.linterhub.deactivate(name), this.systemId).then(() => name);
     }
-    private sendDiagnostics(data) {
+    install(): Promise<string> {
+        return i.install(
+            this.settings.linterhub.mode,
+            __dirname + '/../../',
+            null,
+            true,
+            this.connection.console);        
+    }
+    private sendDiagnostics(data: any) {
         this.connection.console.info("data: " + data);
         let json = JSON.parse(data);
 
-        let files = [];
-        let results = [];
+        let files: any[] = [];
+        let results: any[] = [];
         // TODO: Simplify logic.
         for (let index = 0; index < json.length; index++) {
             var linterResult = json[index];
-            linterResult.Model.Files.forEach(file => {
+            linterResult.Model.Files.forEach((file: any) => {
                 let result: FileResult = this.getFileResult(file, linterResult.Name);
                 let fileIndex = files.indexOf(file.Path);
                 if (fileIndex < 0) {
@@ -168,7 +162,7 @@ export class Integration implements IIntegration {
     }
     private getFileResult(file: any, name: any): FileResult {
         let path = 'file://' + this.project + '/' + file.Path;
-        let diagnostics = file.Errors.map(error => this.convertError(error, name));
+        let diagnostics = file.Errors.map((error: any) => this.convertError(error, name));
         return new FileResult(path, diagnostics);
     }
     private convertError(error: any, name: any): Diagnostic {

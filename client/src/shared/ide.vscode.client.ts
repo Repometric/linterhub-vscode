@@ -1,7 +1,7 @@
-import { IIntegration, IUiIntegration } from './ide'
-import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams } from './ide.vscode'
-import { window, commands, languages, Command, Uri, StatusBarAlignment, TextEditor, QuickPickItem, QuickPickOptions } from 'vscode';
-import { LanguageClient, NotificationType, RequestType } from 'vscode-languageclient';
+import { IUiIntegration } from './ide'
+import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams } from './ide.vscode'
+import { window, workspace, commands, Uri, StatusBarAlignment, TextEditor } from 'vscode';
+import { LanguageClient } from 'vscode-languageclient';
 import * as utils from './utils'
 
 export class Integration implements IUiIntegration  {
@@ -9,15 +9,15 @@ export class Integration implements IUiIntegration  {
     languages: string[];
     linters: string[];
     constructor(client: LanguageClient) {
-        this.client = client;
+        this.setClient(client);
     }
     setClient(client: LanguageClient) {
         this.client = client;
     }
-    analyze() {
+    analyze(): Thenable<void> {
         return this.client.sendRequest(AnalyzeRequest, { full: true });
     }
-    analyzeFile(path: string) {
+    analyzeFile(path: string): Thenable<void> {
         return this.client.sendRequest(AnalyzeRequest, { path: path });
     }
     selectLinter() {
@@ -25,13 +25,13 @@ export class Integration implements IUiIntegration  {
         return this.client.sendRequest(CatalogRequest, { })
             .then((catalog) => {
                 this.client.info(catalog.toString());
-                return catalog.linters.map<QuickPickItem>(linter => { 
+                return catalog.linters.map(linter => { 
                     return { label: linter.name, description: linter.description }
                 }) 
             })
             .then(catalog => window.showQuickPick(catalog, { matchOnDescription: true }));
     }
-    activate() {
+    activate(): Thenable<string> {
         return this.selectLinter()
             .then(item => {
                 if (item) {
@@ -39,44 +39,53 @@ export class Integration implements IUiIntegration  {
                     return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                         .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully activated.`));
                 }
+
+                return null;
             });
-        
     }
-    deactivate() {
+    deactivate(): Thenable<string> {
         return this.selectLinter()
             .then(item => {
                 if (item) {
                     let name = item.label;
                     return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                         .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully deactivated.`));
+                } else {
+                    return null;
                 }
             });
     }
     showOutput(): void {
         return this.client.outputChannel.show();
     }
-    updateStatus(x: StatusParams) {
-        if (x.state == Status.progressStart) {
-            this.client.info("Start: " + x.id);
-            this.progressControl.update(x.id, true);
+    updateStatus(params: StatusParams) {
+        let that = this;
+        if (params.state == Status.progressStart) {
+            return this.progressControl.update(params.id, true);
         }
-        if (x.state == Status.progressEnd) {
-            this.progressControl.update(x.id, false);
+        if (params.state == Status.progressEnd) {
+            return this.progressControl.update(params.id, false);
         }
-
-        if (x.state == Status.noCli) {
-            window.showWarningMessage("Unable to find Linterhub cli.", 'Download', 'Visit Website').then(function (selection) {
+        if (params.state == Status.noCli) {
+            return window.showWarningMessage("Unable to find Linterhub cli.", 'Install', 'Visit Website').then(function (selection) {
                 if (selection === 'Visit Website') {
-                    commands.executeCommand('vscode.open', Uri.parse('https://google.com'));
-                } else if (selection = 'Download') {
-                    // TODO
+                    return commands.executeCommand('vscode.open', Uri.parse('https://google.com'));
+                } else if (selection = 'Install') {
+                    return that.client.sendRequest(InstallRequest, { })
+                        .then((params) => {
+                            let config: any = workspace.getConfiguration('linterhub');
+                            return config.update('cliPath', params.path, true);
+                        })
+                        .then(() => window.showInformationMessage(`Linterhub cli was installed.`));
+                } else {
+                    return null;
                 }
             });
         }
     }
     statusBarItem: any;
     progressBarItem: any;
-    showBar(bar, show: boolean): void {
+    showBar(bar: any, show: boolean): void {
         if (show) {
             bar.show();
         } else {
@@ -102,7 +111,7 @@ export class Integration implements IUiIntegration  {
     }
     progressControl: utils.ProgressManager;
     initialize(): Promise<{}> {
-        let promise = new Promise((resolve, reject) => {
+        let promise = new Promise((resolve) => {
             this.languages = ["javascript"];
             this.progressControl = new utils.ProgressManager(
                 (visible) => this.showBar(this.progressBarItem, visible),

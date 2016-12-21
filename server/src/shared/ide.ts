@@ -1,7 +1,7 @@
 export interface IIntegration {
-    initialize();
-    analyze();
-    analyzeFile(path: string);
-    activate(linter: string);
-    deactivate(linter: string);
+    initialize(): any;
+    analyze(): any;
+    analyzeFile(path: string): any;
+    activate(linter: string): any;
+    deactivate(linter: string): any;
 }
