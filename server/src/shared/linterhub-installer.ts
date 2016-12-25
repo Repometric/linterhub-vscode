@@ -16,14 +16,22 @@ export function install(mode: LinterhubMode, folder: string, proxy: string, stri
     } else {
         return PlatformInformation.GetCurrent().then(info => {
             log.info("Platform: " + info.toString());
-            let url = mode == LinterhubMode.native ? buildPackageUrl(/*info*/) : "https://github.com/Repometric/linterhub-cli/releases/download/0.2/linterhub-cli-osx.10.11-x64-0.2.zip";
-            log.info("URL: " + url);
-            return downloadFile(url, folder + "temp.zip", proxy, strictSSL).then(() => {
+            let version = getPackageVersion();
+            let prefix = "https://github.com/Repometric/linterhub-cli/releases/download/" + version + "/";
+            let name = buildPackageName(mode == LinterhubMode.native, info);
+            let nameFile = name + "-" + getPackageVersion() + ".zip";
+            log.info("Name: " + name);
+            return downloadFile(prefix + nameFile, folder + name + "-" + getPackageVersion(), proxy, strictSSL).then(() => {
                 log.info("File downloaded");
-                return installFile(folder + "temp.zip", folder, log);
+                return installFile(folder + name + "-" + getPackageVersion(), folder, log);
             });
         });
     }
+}
+
+function getPackageVersion(): string {
+    let version = "0.2";
+    return version;
 }
 
 function installFile(pathx: string, folder: any, log: any) {
@@ -87,21 +95,21 @@ function installFile(pathx: string, folder: any, log: any) {
 
 }
 
-function buildPackageUrl(/*info: PlatformInformation, proxy: string = null, strictSSL: boolean = false*/): string {
-    /*let releasesUrl = "https://api.github.com/repos/repometric/linterhub-cli/releases";
-    let promise = downloadJson(releasesUrl, proxy, strictSSL).then(data => {
-        let json = JSON.parse(data);
-        let releases = json[0]["assets"].map(x => x.browser_download_url);
-
-    })
-    return promise;*/
-    // TODO: Improve this logic.
-    /*let arch = info.architecture == "x86_64" ? "64" : "86";
-    let version = "0.2"
-    let platform = info.isMacOS() ? "osx.10.11-x64" : info.isWindows() ? "win10-x64" : "debian.8-x64" ;
-    let template = "https://github.com/Repometric/linterhub-cli/releases/download/${version}/linterhub-cli-${platform}-${version}.zip";
-    return template;*/
-    return "https://github.com/Repometric/linterhub-cli/releases/download/0.2/linterhub-cli-osx.10.11-x64-0.2.zip";
+function buildPackageName(native: boolean, info: PlatformInformation): string {
+    if (native) {
+        return "linterhub-cli-dotnet";
+    }
+    // TODO: Improve name conversion
+    if (info.isMacOS) {
+        return "linterhub-cli-osx.10.11-x64";
+    }
+    if (info.isWindows) {
+        return "linterhub-cli-win10-x64";
+    }
+    if (info.isLinux) {
+        return "linterhub-cli-debian.8-x64";
+    }
+    return "unknown";
 }
 
 export function getDockerVersion() {

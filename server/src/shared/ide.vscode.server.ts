@@ -1,6 +1,5 @@
-import { IIntegration } from './ide'
 import { LinterhubCliLazy, LinterhubMode } from './linterhub-cli'
-import { Status, StatusNotification } from './ide.vscode'
+import { Status, StatusNotification, LinterResult } from './ide.vscode'
 import { IConnection, Diagnostic, DiagnosticSeverity, TextDocument } from 'vscode-languageserver';
 import * as i from "./linterhub-installer"
 import * as path from 'path';
@@ -34,7 +33,7 @@ class FileResult
 	}
 }
 
-export class Integration implements IIntegration {
+export class Integration {
     private systemId: string = "_system";
     private linterhub: LinterhubCliLazy;
     private connection: IConnection;
@@ -48,13 +47,11 @@ export class Integration implements IIntegration {
         this.connection = connection;
     }
     initialize(settings: Settings = null) {
-
-        this.settings = settings;
-        
+        this.settings = settings;     
         this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
         this.settings.linterhub.mode = LinterhubMode[this.settings.linterhub.mode.toString()];
         this.linterhub = new LinterhubCliLazy(this.connection.console, this.settings.linterhub.cliPath, this.project, this.settings.linterhub.mode);
-
+        
         let path_cli = path.resolve(__dirname);
         this.connection.console.warn(path_cli);
         this.onReady = this.linterhub.version();
@@ -74,58 +71,6 @@ export class Integration implements IIntegration {
         });
 */
     }
-    private run(action: () => Promise<{}>, id: string): Promise<{}> {
-        var that = this;
-        that.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: id });
-        return action().then((result) => {
-            that.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: id });
-            return result;
-        }).catch((reason) => {
-            return this.connection.console.error(reason.toString());
-        })      
-    }
-    analyze() {
-        if (this.settings.linterhub.run.indexOf(Run.onStart) < 0) {
-            return null;
-        }
-
-        return this.onReady
-            .then(() => { this.connection.console.info(`SERVER: analyze project.`) })
-            .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.project }) })
-            .then(() => this.linterhub.analyze())
-            .then((data: string) => this.sendDiagnostics(data))
-            .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.project }) })
-            .then(() => { this.connection.console.info(`SERVER: finish analyze project.`); });
-    }
-    analyzeFile(path: string, document: TextDocument = null, run: Run = Run.none) {
-        if (this.settings.linterhub.run.indexOf(run) < 0) {
-            return document;
-        }
-
-        return this.onReady
-            .then(() => { this.connection.console.info(`SERVER: analyze file '${path}'.`) })
-            .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: path }) })
-            .then(() => this.linterhub.analyzeFile(path))
-            .then((data: string) => this.sendDiagnostics(data))
-            .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: path }) })
-            .then(() => { this.connection.console.info(`SERVER: finish analyze file '${path}'.`); })
-            .catch((e) => { this.connection.console.error(e.toString()); });
-    }
-    catalog(): Promise<any> {
-        return this.run(() => {
-            return this.linterhub.catalog().then((data: string) => {
-                let json: any = JSON.parse(data);
-                this.connection.console.info(data);
-                return json;
-            });
-        }, this.systemId);
-    }
-    activate(name: string): Promise<string> {
-        return this.run(() => this.linterhub.activate(name), this.systemId).then(() => name);
-    }
-    deactivate(name: string) {
-        return this.run(() => this.linterhub.deactivate(name), this.systemId).then(() => name);
-    }
     install(): Promise<string> {
         return i.install(
             this.settings.linterhub.mode,
@@ -134,17 +79,102 @@ export class Integration implements IIntegration {
             true,
             this.connection.console);        
     }
-    private sendDiagnostics(data: any) {
-        this.connection.console.info("data: " + data);
-        let json = JSON.parse(data);
+    /**
+     * Analyze project.
+     * 
+     */
+    analyze(): Promise<void> {
+        return this.onReady
+            .then(() => { this.connection.console.info(`SERVER: analyze project.`) })
+            .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.project }) })
+            .then(() => this.linterhub.analyze())
+            .then((data: string) => this.sendDiagnostics(data))
+            .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.project }) })
+            .then(() => { this.connection.console.info(`SERVER: finish analyze project.`) });
+    }
+    /**
+     * Analyze single file.
+     *
+     * @param path The relative path to file.
+     * @param run The run mode (when).
+     * @param document The active document.
+     */
+    analyzeFile(path: string, run: Run = Run.none, document: TextDocument = null): Promise<void> {
+        if (this.settings.linterhub.run.indexOf(run) < 0) {
+            return null;
+        }
 
+        if (document != null) {
+            // TODO
+        }
+
+        return this.onReady
+            .then(() => this.connection.console.info(`SERVER: analyze file '${path}'.`))
+            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: path }))
+            .then(() => this.linterhub.analyzeFile(path))
+            .then((data: string) => this.sendDiagnostics(data))
+            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: path }))
+            .then(() => this.connection.console.info(`SERVER: finish analyze file '${path}'.`));
+    }
+    /**
+     * Get linters catalog.
+     * 
+     */
+    catalog(): Promise<LinterResult[]> {
+        return this.onReady
+            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
+            .then(() => this.linterhub.catalog())
+            .then((data: string) => {
+                let json: any = JSON.parse(data);
+                this.connection.console.info(data);
+                return json;                
+            })
+            .then((result) => { 
+                this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
+                return result;
+            });
+    }
+    /**
+     * Activate linter.
+     *
+     * @param path The linter name.
+     */
+    activate(name: string): Promise<string> {
+        return this.onReady
+            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
+            .then(() => this.linterhub.activate(name))
+            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId }))
+            .then(() => name);
+    }
+    /**
+     * Deactivate linter.
+     *
+     * @param path The linter name.
+     */
+    deactivate(name: string): Promise<string> {
+        return this.onReady
+            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
+            .then(() => this.linterhub.deactivate(name))
+            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId }))
+            .then(() => name);
+    }
+    /**
+     * Show diagnostic messages (results).
+     *
+     * @param data The raw data from CLI.
+     */    
+    private sendDiagnostics(data: any) {
+        let json = JSON.parse(data);
         let files: any[] = [];
         let results: any[] = [];
         // TODO: Simplify logic.
+        // Iterate linters
         for (let index = 0; index < json.length; index++) {
             var linterResult = json[index];
+            // Iterate files in linter result
             linterResult.Model.Files.forEach((file: any) => {
                 let result: FileResult = this.getFileResult(file, linterResult.Name);
+                // Group messages by file name
                 let fileIndex = files.indexOf(file.Path);
                 if (fileIndex < 0) {
                     files.push(file.Path);
@@ -155,19 +185,32 @@ export class Integration implements IIntegration {
                 }
             });
         }
-        
+        // Show messages
         for (let index = 0; index < results.length; index++) {
             this.connection.sendDiagnostics(results[index]);
         }
     }
+    /**
+     * Convert file result.
+     *
+     * @param file The file object.
+     * @param name The linter name.
+     */ 
     private getFileResult(file: any, name: any): FileResult {
+        // TODO: Construct it as URI.
         let path = 'file://' + this.project + '/' + file.Path;
         let diagnostics = file.Errors.map((error: any) => this.convertError(error, name));
         return new FileResult(path, diagnostics);
     }
-    private convertError(error: any, name: any): Diagnostic {
+    /**
+     * Convert message from CLI to IDE format.
+     *
+     * @param message The message from CLI.
+     * @param name The linter name.
+     */ 
+    private convertError(message: any, name: any): Diagnostic {
         let severity = DiagnosticSeverity.Warning;
-        switch(Number(error.Severity))
+        switch(Number(message.Severity))
         {
             case 0: severity = DiagnosticSeverity.Error; break;
             case 1: severity = DiagnosticSeverity.Warning; break;
@@ -175,8 +218,8 @@ export class Integration implements IIntegration {
             case 3: severity = DiagnosticSeverity.Hint; break;
         }
 
-        let row = error.Row || { Start: error.Line, End: error.Line };
-        let column = error.Column || { Start: error.Character, End: error.Character };
+        let row = message.Row || { Start: message.Line, End: message.Line };
+        let column = message.Column || { Start: message.Character, End: message.Character };
         // TODO: Do we need -1 for rows?
         return {
             severity: severity,
@@ -184,7 +227,7 @@ export class Integration implements IIntegration {
                 start: { line: row.Start - 1, character: column.Start },
                 end: { line: row.End - 1, character: column.End }
             },
-            message: error.Message,
+            message: message.Message,
             source: "linterhub:" + name
         };
     }

@@ -17,11 +17,11 @@ let integration: Integration = null;
 documents.listen(connection);
 
 documents.onDidOpen((event) => {
-	integration.analyzeFile(event.document.uri, event.document, Run.onOpen);
+	integration.analyzeFile(event.document.uri, Run.onOpen, event.document);
 });
 
 documents.onDidSave((event) => {
-	integration.analyzeFile(event.document.uri, event.document, Run.onSave);
+	integration.analyzeFile(event.document.uri, Run.onSave, event.document);
 });
 
 documents.onDidClose(() => {
@@ -75,7 +75,7 @@ connection.onRequest(AnalyzeRequest, (params) => {
 	if (params.full) {
 		return integration.analyze();
 	} else {
-		return integration.analyzeFile(params.path, null, Run.force);
+		return integration.analyzeFile(params.path, Run.force);
 	}
 });
 
