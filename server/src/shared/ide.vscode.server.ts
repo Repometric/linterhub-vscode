@@ -46,16 +46,18 @@ export class Integration {
         this.project = project;
         this.connection = connection;
     }
-    initialize(settings: Settings = null) {
-        this.settings = settings;     
-        this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
-        this.settings.linterhub.mode = LinterhubMode[this.settings.linterhub.mode.toString()];
+    private initializeLinterhub() {
         this.linterhub = new LinterhubCliLazy(this.connection.console, this.settings.linterhub.cliPath, this.project, this.settings.linterhub.mode);
-        
         let path_cli = path.resolve(__dirname);
         this.connection.console.warn(path_cli);
         this.onReady = this.linterhub.version();
         return this.onReady;
+    }
+    initialize(settings: Settings = null) {
+        this.settings = settings;
+        this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
+        this.settings.linterhub.mode = LinterhubMode[this.settings.linterhub.mode.toString()];
+        return this.initializeLinterhub();
         /*const config = vscode.workspace.getConfiguration();
         const proxy = config.get<string>('http.proxy');
         const strictSSL = config.get('http.proxyStrictSSL', true);*/
@@ -71,17 +73,29 @@ export class Integration {
         });
 */
     }
+    update(text: string) {
+        this.connection.console.info(text);
+    }
     install(): Promise<string> {
+        this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId });
+        this.connection.console.info(`SERVER: start download.`);
         return i.install(
             this.settings.linterhub.mode,
             __dirname + '/../../',
             null,
             true,
-            this.connection.console);        
+            this.connection.console,
+            this)
+            .then((data) => {
+                this.connection.console.info(`SERVER: finish download.`);
+                this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
+                this.initializeLinterhub();
+                return data;
+             });
     }
     /**
      * Analyze project.
-     * 
+     *
      */
     analyze(): Promise<void> {
         return this.onReady
@@ -118,7 +132,7 @@ export class Integration {
     }
     /**
      * Get linters catalog.
-     * 
+     *
      */
     catalog(): Promise<LinterResult[]> {
         return this.onReady
@@ -127,9 +141,9 @@ export class Integration {
             .then((data: string) => {
                 let json: any = JSON.parse(data);
                 this.connection.console.info(data);
-                return json;                
+                return json;
             })
-            .then((result) => { 
+            .then((result) => {
                 this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
                 return result;
             });
@@ -162,7 +176,7 @@ export class Integration {
      * Show diagnostic messages (results).
      *
      * @param data The raw data from CLI.
-     */    
+     */
     private sendDiagnostics(data: any) {
         let json = JSON.parse(data);
         let files: any[] = [];
@@ -180,7 +194,7 @@ export class Integration {
                     files.push(file.Path);
                     results.push(result);
                 } else {
-                    results[fileIndex].diagnostics = 
+                    results[fileIndex].diagnostics =
                         results[fileIndex].diagnostics.concat(result.diagnostics);
                 }
             });
@@ -195,7 +209,7 @@ export class Integration {
      *
      * @param file The file object.
      * @param name The linter name.
-     */ 
+     */
     private getFileResult(file: any, name: any): FileResult {
         // TODO: Construct it as URI.
         let path = 'file://' + this.project + '/' + file.Path;
@@ -207,7 +221,7 @@ export class Integration {
      *
      * @param message The message from CLI.
      * @param name The linter name.
-     */ 
+     */
     private convertError(message: any, name: any): Diagnostic {
         let severity = DiagnosticSeverity.Warning;
         switch(Number(message.Severity))

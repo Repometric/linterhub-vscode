@@ -53,7 +53,77 @@ export class LinterhubPackage {
     }
 }
 
-export function install(mode: LinterhubMode, folder: string, proxy: string, strictSSL: boolean, log: any) : Promise<string> {
+export class NetworkHelper {
+    buildRequestOptions(urlString: any, proxy: string, strictSSL: boolean): https.RequestOptions {
+        const url = parseUrl(urlString);
+        const options: https.RequestOptions = {
+            host: url.host,
+            path: url.path,
+            agent: getProxyAgent(url, proxy, strictSSL),
+            rejectUnauthorized: strictSSL
+        };
+        return options;        
+    }
+    
+    downloadContent(urlString: any, proxy: string, strictSSL: boolean): Promise<string> {
+        const options = this.buildRequestOptions(urlString, proxy, strictSSL);
+        return new Promise<string>((resolve, reject) => {
+            https.get(options, function(response) {
+                var body = '';
+                response.on('data', (chunk) => body + chunk);
+                response.on('end', () => resolve(body));
+                response.on('error', (err) => reject(new Error(err.message)));
+            });
+        });
+    }
+
+    downloadFile(urlString: string, pathx: string, proxy: string, strictSSL: boolean, status: any): Promise<string> {
+        const options = this.buildRequestOptions(urlString, proxy, strictSSL);
+        return new Promise<string>((resolve, reject) => {
+            let request = https.request(options, response => {
+                if (response.statusCode === 301 || response.statusCode === 302) {
+                    // Redirect - download from new location
+                    return resolve(this.downloadFile(response.headers.location, pathx, proxy, strictSSL, status));
+                }
+
+                if (response.statusCode != 200) {
+                    return reject(new Error(response.statusCode.toString()));
+                }
+                
+                // Downloading - hook up events
+                let packageSize = parseInt(response.headers['content-length'], 10);
+                let downloadedBytes = 0;
+                let downloadPercentage = 0;
+                let tmpFile = fs.createWriteStream(pathx);
+
+                response.on('data', data => {
+                    downloadedBytes += data.length;
+
+                    // Update status bar item with percentage
+                    let newPercentage = Math.ceil(100 * (downloadedBytes / packageSize));
+                    if (newPercentage !== downloadPercentage) {
+                        downloadPercentage = newPercentage;
+                        status.update('Done: ' + newPercentage);
+                    }
+                });
+
+                response.on('end', () => resolve());
+                response.on('error', err => reject(new Error(err.message)));
+                // Begin piping data from the response to the package file
+                response.pipe(tmpFile, { end: false });
+            });
+
+            request.on('error', error => {
+                reject(new Error(error.message));
+            });
+
+            // Execute the request
+            request.end();
+        });
+    }
+}
+
+export function install(mode: LinterhubMode, folder: string, proxy: string, strictSSL: boolean, log: any, status: any) : Promise<string> {
     // TODO
     if (mode == LinterhubMode.docker) {
         return downloadDock("repometric/linterhub-cli");
@@ -63,7 +133,8 @@ export function install(mode: LinterhubMode, folder: string, proxy: string, stri
             let helper = new LinterhubPackage(info, folder, mode == LinterhubMode.native);
             let name = helper.getPackageFullName();
             log.info("Name: " + name);
-            return downloadFile(helper.getPackageUrl(), helper.getPackageFullFileName(), proxy, strictSSL).then(() => {
+            let networkHelper = new NetworkHelper();
+            return networkHelper.downloadFile(helper.getPackageUrl(), helper.getPackageFullFileName(), proxy, strictSSL, status).then(() => {
                 log.info("File downloaded");
                 return installFile(helper.getPackageFullFileName(), folder, log).then((folder) => {
                     return path.resolve(folder, 'bin', helper.getPackageName());
@@ -82,7 +153,6 @@ function installFile(zipFile: string, folder: any, log: any) {
             }
 
             zipFile.readEntry();
-
             zipFile.on('entry', (entry: yauzl.Entry) => {
                 let absoluteEntryPath = path.resolve(/*getBaseInstallPath(pkg)*/
                 folder, entry.fileName);
@@ -121,10 +191,7 @@ function installFile(zipFile: string, folder: any, log: any) {
                 }
             });
 
-            zipFile.on('end', () => {
-                resolve(folder);
-            });
-
+            zipFile.on('end', () => resolve(folder));
             zipFile.on('error', (err: any) => {
                 log.error(err.toString());
                 reject(new Error('Zip File Error:' + err.code || ''));
@@ -148,89 +215,4 @@ function removeNewLine(out: string): string {
 
 export function downloadDock(name: string): Promise<string> {
     return executeChildProcess("docker pull " + name);
-}
-
-export function downloadContent(urlString: any, proxy: string, strictSSL: boolean): Promise<string> {
-    const url = parseUrl(urlString);
-    const options: https.RequestOptions = {
-        host: url.host,
-        path: url.path,
-        agent: getProxyAgent(url, proxy, strictSSL),
-        rejectUnauthorized: strictSSL
-    };
-    return new Promise<string>((resolve, reject) => {
-        https.get(options, function(response){
-            var body = '';
-
-            response.on('data', function(chunk){
-                body += chunk;
-            });
-
-            response.on('end', function(){
-                resolve(body);
-            });
-
-            response.on('error', err => {
-                reject(new Error(err.message));
-            });
-        })
-    });
-}
-
-export function downloadFile(urlString: string, pathx: string, proxy: string, strictSSL: boolean): Promise<string> {
-    const url = parseUrl(urlString);
-
-    const options: https.RequestOptions = {
-        host: url.host,
-        path: url.path,
-        agent: getProxyAgent(url, proxy, strictSSL),
-        rejectUnauthorized: strictSSL
-    };
-
-    return new Promise<string>((resolve, reject) => {
-        let request = https.request(options, response => {
-            if (response.statusCode === 301 || response.statusCode === 302) {
-                // Redirect - download from new location
-                return resolve(downloadFile(response.headers.location, pathx, proxy, strictSSL));
-            }
-
-            if (response.statusCode != 200) {
-                return reject(new Error(response.statusCode.toString()));
-            }
-            
-            // Downloading - hook up events
-            let packageSize = parseInt(response.headers['content-length'], 10);
-            let downloadedBytes = 0;
-            let downloadPercentage = 0;
-            let tmpFile = fs.createWriteStream(pathx);
-
-            response.on('data', data => {
-                downloadedBytes += data.length;
-
-                // Update status bar item with percentage
-                let newPercentage = Math.ceil(100 * (downloadedBytes / packageSize));
-                if (newPercentage !== downloadPercentage) {
-                    downloadPercentage = newPercentage;
-                }
-            });
-
-            response.on('end', () => {
-                resolve();
-            });
-
-            response.on('error', err => {
-                reject(new Error(err.message));
-            });
-
-            // Begin piping data from the response to the package file
-            response.pipe(tmpFile, { end: false });
-        });
-
-        request.on('error', error => {
-            reject(new Error(error.message));
-        });
-
-        // Execute the request
-        request.end();
-    });
 }

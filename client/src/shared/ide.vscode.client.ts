@@ -1,10 +1,9 @@
-import { IUiIntegration } from './ide'
 import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams } from './ide.vscode'
 import { window, workspace, commands, Uri, StatusBarAlignment, TextEditor } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
 import * as utils from './utils'
 
-export class Integration implements IUiIntegration  {
+export class Integration {
     client: LanguageClient;
     languages: string[];
     linters: string[];
@@ -25,9 +24,9 @@ export class Integration implements IUiIntegration  {
         return this.client.sendRequest(CatalogRequest, { })
             .then((catalog) => {
                 this.client.info(catalog.toString());
-                return catalog.linters.map(linter => { 
+                return catalog.linters.map(linter => {
                     return { label: linter.name, description: linter.description }
-                }) 
+                })
             })
             .then(catalog => window.showQuickPick(catalog, { matchOnDescription: true }));
     }
@@ -70,16 +69,16 @@ export class Integration implements IUiIntegration  {
             return window.showWarningMessage("Unable to find Linterhub cli.", 'Install', 'Visit Website').then(function (selection) {
                 if (selection === 'Visit Website') {
                     return commands.executeCommand('vscode.open', Uri.parse('https://google.com'));
-                } else if (selection = 'Install') {
+                }
+                if (selection === 'Install') {
                     return that.client.sendRequest(InstallRequest, { })
                         .then((params) => {
                             let config: any = workspace.getConfiguration('linterhub');
                             return config.update('cliPath', params.path, true);
                         })
                         .then(() => window.showInformationMessage(`Linterhub cli was installed.`));
-                } else {
-                    return null;
                 }
+                return null;
             });
         }
     }
