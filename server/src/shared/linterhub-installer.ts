@@ -9,6 +9,50 @@ import { PlatformInformation } from './platform'
 import { mkdirp } from 'mkdirp';
 import * as yauzl from 'yauzl';
 
+export class LinterhubPackage {
+    readonly prefix: string = "https://github.com/Repometric/linterhub-cli/releases/download/";
+    readonly version: string = "0.2";
+    private info: PlatformInformation;
+    private native: boolean;
+    private folder: string;
+    constructor(info: PlatformInformation, folder: string, native: boolean) {
+        this.info = info;
+        this.native = native;
+        this.folder = folder;
+    }
+    getPackageVersion(): string {
+        return this.version;
+    }
+    getPackageName(): string {
+        if (this.native) {
+            return "dotnet";
+        }
+        // TODO: Improve name conversion
+        if (this.info.isMacOS) {
+            return "osx.10.11-x64";
+        }
+        if (this.info.isWindows) {
+            return "win10-x64";
+        }
+        if (this.info.isLinux) {
+            return "debian.8-x64";
+        }
+        return "unknown";   
+    }
+    getPackageFullName(): string {
+        return "linterhub-cli-" + this.getPackageName() + "-" + this.version;
+    }
+    getPackageFileName(): string {
+        return this.getPackageFullName() + ".zip";
+    }
+    getPackageFullFileName(): string {
+        return this.folder + this.getPackageFullName();
+    }
+    getPackageUrl(): string {
+        return this.prefix + this.version + "/" + this.getPackageFileName();
+    }
+}
+
 export function install(mode: LinterhubMode, folder: string, proxy: string, strictSSL: boolean, log: any) : Promise<string> {
     // TODO
     if (mode == LinterhubMode.docker) {
@@ -16,28 +60,23 @@ export function install(mode: LinterhubMode, folder: string, proxy: string, stri
     } else {
         return PlatformInformation.GetCurrent().then(info => {
             log.info("Platform: " + info.toString());
-            let version = getPackageVersion();
-            let prefix = "https://github.com/Repometric/linterhub-cli/releases/download/" + version + "/";
-            let name = buildPackageName(mode == LinterhubMode.native, info);
-            let nameFile = name + "-" + getPackageVersion() + ".zip";
+            let helper = new LinterhubPackage(info, folder, mode == LinterhubMode.native);
+            let name = helper.getPackageFullName();
             log.info("Name: " + name);
-            return downloadFile(prefix + nameFile, folder + name + "-" + getPackageVersion(), proxy, strictSSL).then(() => {
+            return downloadFile(helper.getPackageUrl(), helper.getPackageFullFileName(), proxy, strictSSL).then(() => {
                 log.info("File downloaded");
-                return installFile(folder + name + "-" + getPackageVersion(), folder, log);
+                return installFile(helper.getPackageFullFileName(), folder, log).then((folder) => {
+                    return path.resolve(folder, 'bin', helper.getPackageName());
+                });
             });
         });
     }
 }
 
-function getPackageVersion(): string {
-    let version = "0.2";
-    return version;
-}
-
-function installFile(pathx: string, folder: any, log: any) {
+function installFile(zipFile: string, folder: any, log: any) {
     return new Promise<string>((resolve, reject) => {
 
-        yauzl.open(pathx, { autoClose: true, lazyEntries: true }, (err, zipFile) => {
+        yauzl.open(zipFile, { autoClose: true, lazyEntries: true }, (err, zipFile) => {
             if (err) {
                 return reject(new Error('Immediate zip file error'));
             }
@@ -83,7 +122,7 @@ function installFile(pathx: string, folder: any, log: any) {
             });
 
             zipFile.on('end', () => {
-                resolve( path.resolve(folder, 'bin', 'osx.10.11-x64') );
+                resolve(folder);
             });
 
             zipFile.on('error', (err: any) => {
@@ -93,23 +132,6 @@ function installFile(pathx: string, folder: any, log: any) {
         })
     })
 
-}
-
-function buildPackageName(native: boolean, info: PlatformInformation): string {
-    if (native) {
-        return "linterhub-cli-dotnet";
-    }
-    // TODO: Improve name conversion
-    if (info.isMacOS) {
-        return "linterhub-cli-osx.10.11-x64";
-    }
-    if (info.isWindows) {
-        return "linterhub-cli-win10-x64";
-    }
-    if (info.isLinux) {
-        return "linterhub-cli-debian.8-x64";
-    }
-    return "unknown";
 }
 
 export function getDockerVersion() {
