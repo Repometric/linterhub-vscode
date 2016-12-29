@@ -128,7 +128,7 @@ export class Integration {
             .then(() => this.connection.console.info(`SERVER: analyze file '${path}'.`))
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: path }))
             .then(() => this.linterhub.analyzeFile(path))
-            .then((data: string) => this.sendDiagnostics(data))
+            .then((data: string) => this.sendDiagnostics(data, document))
             .catch((reason) => { this.connection.console.error(`SERVER: error analyze file '${reason}.toString()'.`) })
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: path }))
             .then(() => this.connection.console.info(`SERVER: finish analyze file '${path}'.`));
@@ -146,7 +146,7 @@ export class Integration {
                 this.connection.console.info(data);
                 return json;
             })
-            .catch((reason) => { 
+            .catch((reason) => {
                 this.connection.console.error(`SERVER: error catalog '${reason}.toString()'.`);
                 return [];
             })
@@ -186,7 +186,7 @@ export class Integration {
      *
      * @param data The raw data from CLI.
      */
-    private sendDiagnostics(data: any) {
+    private sendDiagnostics(data: any, document: any = null) {
         let json = JSON.parse(data);
         let files: any[] = [];
         let results: any[] = [];
@@ -196,7 +196,7 @@ export class Integration {
             var linterResult = json[index];
             // Iterate files in linter result
             linterResult.Model.Files.forEach((file: any) => {
-                let result: FileResult = this.getFileResult(file, linterResult.Name);
+                let result: FileResult = this.getFileResult(file, linterResult.Name, document);
                 // Group messages by file name
                 let fileIndex = files.indexOf(file.Path);
                 if (fileIndex < 0) {
@@ -219,11 +219,11 @@ export class Integration {
      * @param file The file object.
      * @param name The linter name.
      */
-    private getFileResult(file: any, name: any): FileResult {
+    private getFileResult(file: any, name: any, document: any): FileResult {
         // TODO: Construct it as URI.
-        let path = 'file://' + this.project + '/' + file.Path;
+        let fullPath = document != null ? document.uri : 'file://' + this.project + '\\' + file.Path;
         let diagnostics = file.Errors.map((error: any) => this.convertError(error, name));
-        return new FileResult(path, diagnostics);
+        return new FileResult(fullPath.toString(), diagnostics);
     }
     /**
      * Convert message from CLI to IDE format.
