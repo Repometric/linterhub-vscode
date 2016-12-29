@@ -1,5 +1,6 @@
 import { executeChildProcess, Cacheable } from './util'
 import * as path from 'path';
+import Uri from 'vscode-uri'
 
 export enum LinterhubMode {
     dotnet,
@@ -35,7 +36,8 @@ export class LinterhubArgs {
     }
     analyzeFile(file: string): string {
         // TODO: Improve this code.
-        let normalizedPath = file.replace('file://', '')
+        let path = Uri.parse(file).fsPath;
+        let normalizedPath = path.replace('file://', '')
             .replace(this.project + '/', '')
             .replace(this.project + '\\', '');
         return this.cliPath + `--mode=analyze --project=${this.project} --file=${normalizedPath}`;

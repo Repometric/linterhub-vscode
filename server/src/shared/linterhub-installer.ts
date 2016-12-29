@@ -28,13 +28,13 @@ export class LinterhubPackage {
             return "dotnet";
         }
         // TODO: Improve name conversion
-        if (this.info.isMacOS) {
+        if (this.info.isMacOS()) {
             return "osx.10.11-x64";
         }
-        if (this.info.isWindows) {
+        if (this.info.isWindows()) {
             return "win10-x64";
         }
-        if (this.info.isLinux) {
+        if (this.info.isLinux()) {
             return "debian.8-x64";
         }
         return "unknown";   

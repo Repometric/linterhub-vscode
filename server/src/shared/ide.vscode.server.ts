@@ -91,7 +91,8 @@ export class Integration {
                 this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
                 this.initializeLinterhub();
                 return data;
-             });
+             })
+             .catch((reason) => { this.connection.console.error(`SERVER: error download '${reason}.toString()'.`) } );
     }
     /**
      * Analyze project.
@@ -103,6 +104,7 @@ export class Integration {
             .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.project }) })
             .then(() => this.linterhub.analyze())
             .then((data: string) => this.sendDiagnostics(data))
+            .catch((reason) => { this.connection.console.error(`SERVER: error analyze project '${reason}.toString()'.`) })
             .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.project }) })
             .then(() => { this.connection.console.info(`SERVER: finish analyze project.`) });
     }
@@ -127,6 +129,7 @@ export class Integration {
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: path }))
             .then(() => this.linterhub.analyzeFile(path))
             .then((data: string) => this.sendDiagnostics(data))
+            .catch((reason) => { this.connection.console.error(`SERVER: error analyze file '${reason}.toString()'.`) })
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: path }))
             .then(() => this.connection.console.info(`SERVER: finish analyze file '${path}'.`));
     }
@@ -143,6 +146,10 @@ export class Integration {
                 this.connection.console.info(data);
                 return json;
             })
+            .catch((reason) => { 
+                this.connection.console.error(`SERVER: error catalog '${reason}.toString()'.`);
+                return [];
+            })
             .then((result) => {
                 this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
                 return result;
@@ -157,6 +164,7 @@ export class Integration {
         return this.onReady
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
             .then(() => this.linterhub.activate(name))
+            .catch((reason) => { this.connection.console.error(`SERVER: error activate '${reason}.toString()'.`) })
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId }))
             .then(() => name);
     }
@@ -169,6 +177,7 @@ export class Integration {
         return this.onReady
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
             .then(() => this.linterhub.deactivate(name))
+            .catch((reason) => { this.connection.console.error(`SERVER: error deactivate '${reason}.toString()'.`) })
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId }))
             .then(() => name);
     }
