@@ -29,10 +29,10 @@ export function activate(context: ExtensionContext) {
 		client.onRequest(ConfigRequest, () =>
 		{
 			const config = workspace.getConfiguration();
-			let response: any = {};
-			response.proxy = config.get<string>('http.proxy');
-			response.strictSSL = config.get('http.proxyStrictSSL', true);
-			return response;
+			return {
+				proxy: config.get<string>('http.proxy'),
+				strictSSL: config.get('http.proxyStrictSSL', true)
+			};
 		});
 
 		return client.onReady().then(() => {

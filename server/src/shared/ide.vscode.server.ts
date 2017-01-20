@@ -58,7 +58,7 @@ export class Integration {
         this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
         this.settings.linterhub.mode = LinterhubMode[this.settings.linterhub.mode.toString()];
         this.connection.sendRequest(ConfigRequest)
-        .then((x: ConfigResult) => { this.connection.console.info(x.proxy); });
+            .then((x: ConfigResult) => { this.connection.console.info(x.proxy); });
 
         return this.initializeLinterhub();
         
