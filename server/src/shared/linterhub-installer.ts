@@ -130,7 +130,6 @@ export function install(mode: LinterhubMode, folder: string, proxy: string, stri
     } else {
         return PlatformInformation.GetCurrent().then(info => {
             log.info("Platform: " + info.toString());
-            if(mode == LinterhubMode.dotnet) log.info("jdijfidjifjdifjdifjidf");
             let helper = new LinterhubPackage(info, folder, mode == LinterhubMode.native);
             let name = helper.getPackageFullName();
             log.info("Name: " + name);
