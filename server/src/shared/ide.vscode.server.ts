@@ -1,5 +1,5 @@
 import { LinterhubCliLazy, LinterhubMode } from './linterhub-cli'
-import { Status, StatusNotification, LinterResult } from './ide.vscode'
+import { Status, StatusNotification, LinterResult, ConfigRequest, ConfigResult } from './ide.vscode'
 import { IConnection, Diagnostic, DiagnosticSeverity, TextDocument } from 'vscode-languageserver';
 import * as i from "./linterhub-installer"
 import * as path from 'path';
@@ -57,14 +57,11 @@ export class Integration {
         this.settings = settings;
         this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
         this.settings.linterhub.mode = LinterhubMode[this.settings.linterhub.mode.toString()];
-        return this.initializeLinterhub();
-        /*const config = vscode.workspace.getConfiguration();
-        const proxy = config.get<string>('http.proxy');
-        const strictSSL = config.get('http.proxyStrictSSL', true);*/
+        this.connection.sendRequest(ConfigRequest)
+            .then((x: ConfigResult) => { this.connection.console.info(x.proxy); });
 
-        /*const config = vscode.workspace.getConfiguration();
-        const proxy = config.get<string>('http.proxy');
-        const strictSSL = config.get('http.proxyStrictSSL', true);*/
+        return this.initializeLinterhub();
+        
         /*
         i.install(this.settings.linterhub.mode, null, true, this.connection.console).catch(e => {
             this.connection.console.error(e.toString());
@@ -78,21 +75,30 @@ export class Integration {
     }
     install(): Promise<string> {
         this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId });
-        this.connection.console.info(`SERVER: start download.`);
-        return i.install(
-            this.settings.linterhub.mode,
-            __dirname + '/../../',
-            null,
-            true,
-            this.connection.console,
-            this)
-            .then((data) => {
-                this.connection.console.info(`SERVER: finish download.`);
-                this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
-                this.initializeLinterhub();
-                return data;
-             })
-             .catch((reason) => { this.connection.console.error(`SERVER: error download '${reason}.toString()'.`) } );
+        
+        return i.getDotnetVersion()
+            .then(() => { this.settings.linterhub.mode = LinterhubMode.dotnet; })
+            .catch(() => { this.settings.linterhub.mode = LinterhubMode.native; })
+            .then(() => { this.connection.console.info(`SERVER: start download.`); })
+            .then(() => { this.connection.console.info(this.settings.linterhub.mode.toString()) })
+            .then(() => {
+            
+                return i.install(this.settings.linterhub.mode, __dirname + '/../../', null, true, this.connection.console, this)
+                    .then((data) => {
+                        this.connection.console.info(`SERVER: finish download.`);
+                        this.initializeLinterhub();
+                        return data;
+                    })
+                    .catch((reason) => { 
+                        this.connection.console.error(`SERVER: error catalog '${reason}.toString()'.`);
+                        return [];
+                    })
+                    .then((result) => {
+                        this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
+                        return result;
+                    });
+            });
+        
     }
     /**
      * Analyze project.
