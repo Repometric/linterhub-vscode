@@ -59,11 +59,6 @@ export class Integration {
         this.settings.linterhub.mode = LinterhubMode[this.settings.linterhub.mode.toString()];
         this.connection.sendRequest(ConfigRequest)
         .then((x: ConfigResult) => { this.connection.console.info(x.proxy); });
-    
-
-        //const proxy = workspaceConfig.proxy;
-        //this.connection.console.info(workspaceConfig);
-        // const strictSSL = workspaceConfig.strictSSL;
 
         return this.initializeLinterhub();
         
@@ -91,13 +86,16 @@ export class Integration {
                 return i.install(this.settings.linterhub.mode, __dirname + '/../../', null, true, this.connection.console, this)
                     .then((data) => {
                         this.connection.console.info(`SERVER: finish download.`);
-                        this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
                         this.initializeLinterhub();
                         return data;
                     })
                     .catch((reason) => { 
-                        this.connection.console.error(`SERVER: error download '${reason}.toString()'.`);
-                        return '';
+                        this.connection.console.error(`SERVER: error catalog '${reason}.toString()'.`);
+                        return [];
+                    })
+                    .then((result) => {
+                        this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
+                        return result;
                     });
             });
         
