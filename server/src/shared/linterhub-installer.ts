@@ -11,7 +11,7 @@ import * as yauzl from 'yauzl';
 
 export class LinterhubPackage {
     readonly prefix: string = "https://github.com/Repometric/linterhub-cli/releases/download/";
-    readonly version: string = "0.2";
+    readonly version: string = "0.2.2";
     private info: PlatformInformation;
     private native: boolean;
     private folder: string;
@@ -24,7 +24,7 @@ export class LinterhubPackage {
         return this.version;
     }
     getPackageName(): string {
-        if (this.native) {
+        if (!this.native) {
             return "dotnet";
         }
         // TODO: Improve name conversion
@@ -130,6 +130,7 @@ export function install(mode: LinterhubMode, folder: string, proxy: string, stri
     } else {
         return PlatformInformation.GetCurrent().then(info => {
             log.info("Platform: " + info.toString());
+            if(mode == LinterhubMode.dotnet) log.info("jdijfidjifjdifjdifjidf");
             let helper = new LinterhubPackage(info, folder, mode == LinterhubMode.native);
             let name = helper.getPackageFullName();
             log.info("Name: " + name);
