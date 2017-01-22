@@ -24,6 +24,10 @@ export interface AnalyzeParams {
 	path: string;
 }
 
+export interface LinterVersionParams {
+	linter: string;
+}
+
 export interface NoResult {
 }
 
@@ -31,6 +35,12 @@ export interface LinterResult {
 	name: string;
 	description: string;
 	languages: string;
+}
+
+export interface LinterVersionResult {
+	LinterName: string;
+	Installed: boolean;
+	Version: string;
 }
 
 export interface CatalogResult {
@@ -51,4 +61,6 @@ export const ActivateRequest: RequestType<ActivateParams, string, void> = { get 
 export const CatalogRequest: RequestType<NoParams, CatalogResult, void> = { get method() { return 'linterhub/catalog'; } };
 export const AnalyzeRequest: RequestType<AnalyzeParams, void, void> = { get method() { return 'linterhub/analyze'; } };
 export const InstallRequest: RequestType<NoParams, InstallResult, void> = { get method() { return 'linterhub/install'; } };
-export const ConfigRequest: RequestType<NoParams, ConfigResult, void> = { get method() { return 'linterhub/config'; } };
+export const ConfigRequest: RequestType<NoParams, any, void> = { get method() { return 'linterhub/config'; } };
+export const LinterVersionRequest: RequestType<LinterVersionParams, LinterVersionResult, void> = { get method() { return 'linterhub/linterVersion'; } };
+export const LinterInstallRequest: RequestType<LinterVersionParams, LinterVersionResult, void> = { get method() { return 'linterhub/linterInstall'; } };

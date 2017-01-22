@@ -1,5 +1,5 @@
 import { LinterhubCliLazy, LinterhubMode } from './linterhub-cli'
-import { Status, StatusNotification, LinterResult, ConfigRequest, ConfigResult } from './ide.vscode'
+import { Status, StatusNotification, LinterResult, ConfigRequest, ConfigResult, LinterVersionResult } from './ide.vscode'
 import { IConnection, Diagnostic, DiagnosticSeverity, TextDocument } from 'vscode-languageserver';
 import * as i from "./linterhub-installer"
 import * as path from 'path';
@@ -174,6 +174,30 @@ export class Integration {
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId }))
             .then(() => name);
     }
+    /**
+     * Get the linter version.
+     *
+     * @param path The linter name.
+     */
+    linterVersion(name: string, install: boolean): Promise<LinterVersionResult> {
+        return this.onReady
+            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
+            .then(() => this.linterhub.linterVersion(name, install))
+            .then((data: string) => {
+                let json: LinterVersionResult = JSON.parse(data);
+                this.connection.console.info(data);
+                return json;
+            })
+            .catch((reason) => {
+                this.connection.console.error(`SERVER: error while requesting linter version '${reason}.toString()'.`);
+                return null;
+            })
+            .then((result) => {
+                this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
+                return result;
+            });
+    }
+
     /**
      * Deactivate linter.
      *
