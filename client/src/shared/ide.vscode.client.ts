@@ -1,4 +1,4 @@
-import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams } from './ide.vscode'
+import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams, LinterVersionRequest, LinterInstallRequest } from './ide.vscode'
 import { window, workspace, commands, Uri, StatusBarAlignment, TextEditor } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
 import * as utils from './utils'
@@ -35,8 +35,27 @@ export class Integration {
             .then(item => {
                 if (item) {
                     let name = item.label;
-                    return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
-                        .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully activated.`));
+                    return this.client.sendRequest(LinterVersionRequest, { linter: name })
+                        .then((result) => {
+                            if(result.Installed)
+                                return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
+                                    .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully activated.`));
+                            else
+                            {
+                                window.showWarningMessage(`Linter "${name}" is not installed. Trying to install...`);
+                                return this.client.sendRequest(LinterInstallRequest, { linter: name })
+                                    .then((result) => {
+                                        if(result.Installed)
+                                            return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
+                                                .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully installed and activated.`));
+                                        else
+                                        {
+                                            window.showWarningMessage(`Can't install "${name}". Perhaps cli can't execute script`);
+                                            return null;
+                                        }
+                                    });
+                            }
+                        });
                 }
 
                 return null;

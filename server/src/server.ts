@@ -5,7 +5,7 @@ import {
 	TextDocuments,
 	IPCMessageReader, IPCMessageWriter
 } from 'vscode-languageserver';
-import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification } from './shared/ide.vscode'
+import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from './shared/ide.vscode'
 
 import { Integration, Run } from './shared/ide.vscode.server'
 
@@ -69,6 +69,16 @@ connection.onRequest(ActivateRequest, (params) => {
 		connection.console.info("SERVER: deactivate linter.");
 		return integration.deactivate(params.linter);
 	}
+});
+
+connection.onRequest(LinterVersionRequest, (params) => {
+	connection.console.info("SERVER: request " + params.linter + " version...");
+	return integration.linterVersion(params.linter, false);
+});
+
+connection.onRequest(LinterInstallRequest, (params) => {
+	connection.console.info("SERVER: trying to install " + params.linter + "...");
+	return integration.linterVersion(params.linter, true);
 });
 
 connection.onRequest(AnalyzeRequest, (params) => {

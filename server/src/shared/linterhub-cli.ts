@@ -45,6 +45,9 @@ export class LinterhubArgs {
     activate(linter: string): string {
         return this.cliPath + `--mode=activate --project=${this.project} --active=true --linter=${linter}`;
     }
+    linterVersion(linter: string, install: boolean): string {
+        return this.cliPath + (install ? `--mode=LinterInstall --linter=${linter}` : `--mode=LinterVersion --linter=${linter}`);
+    }
     deactivate(linter: string): string {
         return this.cliPath + `--mode=activate --project=${this.project} --active=false --linter=${linter}`;
     }
@@ -81,6 +84,9 @@ export class LinterhubCli {
     }
     activate(linter: string): Promise<{}> {
         return this.execute(this.args.activate(linter));
+    }
+    linterVersion(linter: string, install: boolean): Promise<{}> {
+        return this.execute(this.args.linterVersion(linter, install));
     }
     deactivate(linter: string): Promise<{}> {
         return this.execute(this.args.deactivate(linter));;
