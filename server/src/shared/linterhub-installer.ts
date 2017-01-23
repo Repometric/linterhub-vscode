@@ -11,7 +11,7 @@ import * as yauzl from 'yauzl';
 
 export class LinterhubPackage {
     readonly prefix: string = "https://github.com/Repometric/linterhub-cli/releases/download/";
-    readonly version: string = "0.2.2";
+    readonly version: string = "0.3.1";
     private info: PlatformInformation;
     private native: boolean;
     private folder: string;
