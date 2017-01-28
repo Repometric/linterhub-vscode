@@ -1,8 +1,8 @@
-import { LinterhubCliLazy, LinterhubMode } from './linterhub-cli'
+import { LinterhubCliLazy, LinterhubMode, getDotnetVersion, install } from 'linterhub-ide'
 import { Status, StatusNotification, LinterResult, ConfigRequest, ConfigResult, LinterVersionResult } from './ide.vscode'
 import { IConnection, Diagnostic, DiagnosticSeverity, TextDocument } from 'vscode-languageserver';
-import * as i from "./linterhub-installer"
 import * as path from 'path';
+import Uri from 'vscode-uri'
 
 export enum Run {
     none,
@@ -35,6 +35,7 @@ class FileResult
 
 export class Integration {
     private systemId: string = "_system";
+    private version: string = "0.3.2";
     private linterhub: LinterhubCliLazy;
     private connection: IConnection;
     private settings: Settings;
@@ -76,14 +77,14 @@ export class Integration {
     install(): Promise<string> {
         this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId });
         
-        return i.getDotnetVersion()
+        return getDotnetVersion()
             .then(() => { this.settings.linterhub.mode = LinterhubMode.dotnet; })
             .catch(() => { this.settings.linterhub.mode = LinterhubMode.native; })
             .then(() => { this.connection.console.info(`SERVER: start download.`); })
             .then(() => { this.connection.console.info(this.settings.linterhub.mode.toString()) })
             .then(() => {
             
-                return i.install(this.settings.linterhub.mode, __dirname + '/../../', null, true, this.connection.console, this)
+                return install(this.settings.linterhub.mode, __dirname + '/../../', null, true, this.connection.console, this, this.version)
                     .then((data) => {
                         this.connection.console.info(`SERVER: finish download.`);
                         this.initializeLinterhub();
@@ -133,7 +134,7 @@ export class Integration {
         return this.onReady
             .then(() => this.connection.console.info(`SERVER: analyze file '${path}'.`))
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: path }))
-            .then(() => this.linterhub.analyzeFile(path))
+            .then(() => this.linterhub.analyzeFile(Uri.parse(path).fsPath))
             .then((data: string) => this.sendDiagnostics(data, document))
             .catch((reason) => { this.connection.console.error(`SERVER: error analyze file '${reason}.toString()'.`) })
             .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: path }))
