@@ -1,59 +1,84 @@
-import { LinterhubCliLazy, LinterhubMode, getDotnetVersion, install } from 'linterhub-ide'
-import { Status, StatusNotification, LinterResult, ConfigRequest, ConfigResult, LinterVersionResult } from './ide.vscode'
-import { IConnection, Diagnostic, DiagnosticSeverity, TextDocument } from 'vscode-languageserver';
-import * as path from 'path';
+import { LinterhubMode, Integration, Settings, Run, LoggerInterface, StatusInterface, ConfigResult } from 'linterhub-ide'
+import { Status, StatusNotification, ConfigRequest } from './ide.vscode'
+import { IConnection, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
 import Uri from 'vscode-uri'
 
-export enum Run {
-    none,
-    force,
-    onStart,
-    onOpen,
-    onType,
-    onSave
-}
-
-export interface Settings {
-	linterhub: {
-		enable: boolean;
-        run: Run[];
-        mode: LinterhubMode,
-		cliPath: any;
-	}
-	[key: string]: any;
-}
-
-class FileResult
-{
+class FileResult {
     public readonly uri: string;
     public diagnostics: Diagnostic[];
-	constructor (uri: string, diagnostics: Diagnostic[]) {
+    constructor(uri: string, diagnostics: Diagnostic[]) {
         this.uri = uri;
         this.diagnostics = diagnostics;
-	}
+    }
 }
 
-export class Integration {
-    private systemId: string = "_system";
-    private version: string = "0.3.2";
-    private linterhub: LinterhubCliLazy;
+class Logger implements LoggerInterface
+{
     private connection: IConnection;
-    private settings: Settings;
-    private project: string;
+    private prefix: string = "SERVER: ";
 
-    private onReady: Promise<{}>;
-
-    constructor(project: string, connection: IConnection) {
-        this.project = project;
+    constructor(connection: IConnection)
+    {
         this.connection = connection;
     }
-    private initializeLinterhub() {
-        this.linterhub = new LinterhubCliLazy(this.connection.console, this.settings.linterhub.cliPath, this.project, this.settings.linterhub.mode);
-        let path_cli = path.resolve(__dirname);
-        this.connection.console.warn(path_cli);
-        this.onReady = this.linterhub.version();
-        return this.onReady;
+
+    public info(string: string): void
+    {
+        this.connection.console.info(this.prefix + string);
     }
+    public error(string: string): void
+    {
+        this.connection.console.error(this.prefix + string);
+    }
+    public warn(string: string): void
+    {
+        this.connection.console.warn(this.prefix + string);
+    }
+}
+
+class StatusLogger implements StatusInterface
+{
+    private connection: IConnection;
+    private prefix: string = "SERVER: ";
+
+    constructor(connection: IConnection)
+    {
+        this.connection = connection;
+    }
+
+    public update(params: any, progress?: boolean, text?: string)
+    {
+        params = null;
+        progress = null;
+        this.connection.console.info(this.prefix + text);
+    }
+}
+
+export class IntegrationVScode extends Integration {
+    private connection: IConnection;
+    protected settings: Settings;
+    protected linterhub_version: string = "0.3.3";
+    protected logger: Logger;
+    protected status: StatusLogger;
+
+    protected sendNotification(params: any, progress: boolean): void {
+        params.state = progress ? Status.progressStart : Status.progressEnd;
+        this.connection.sendNotification(StatusNotification, params)
+    }
+
+    protected normalizePath(path: string): string
+    {
+        return Uri.parse(path).fsPath;
+    }
+
+    constructor(project: string, connection: IConnection) {
+        super();
+        this.project = project;
+        this.connection = connection;
+        this.logger = new Logger(this.connection);
+        this.status = new StatusLogger(this.connection);
+    }
+
     initialize(settings: Settings = null) {
         this.settings = settings;
         this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
@@ -62,7 +87,7 @@ export class Integration {
             .then((x: ConfigResult) => { this.connection.console.info(x.proxy); });
 
         return this.initializeLinterhub();
-        
+
         /*
         i.install(this.settings.linterhub.mode, null, true, this.connection.console).catch(e => {
             this.connection.console.error(e.toString());
@@ -71,153 +96,13 @@ export class Integration {
         });
 */
     }
-    update(text: string) {
-        this.connection.console.info(text);
-    }
-    install(): Promise<string> {
-        this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId });
-        
-        return getDotnetVersion()
-            .then(() => { this.settings.linterhub.mode = LinterhubMode.dotnet; })
-            .catch(() => { this.settings.linterhub.mode = LinterhubMode.native; })
-            .then(() => { this.connection.console.info(`SERVER: start download.`); })
-            .then(() => { this.connection.console.info(this.settings.linterhub.mode.toString()) })
-            .then(() => {
-            
-                return install(this.settings.linterhub.mode, __dirname + '/../../', null, true, this.connection.console, this, this.version)
-                    .then((data) => {
-                        this.connection.console.info(`SERVER: finish download.`);
-                        this.initializeLinterhub();
-                        return data;
-                    })
-                    .catch((reason) => { 
-                        this.connection.console.error(`SERVER: error catalog '${reason}.toString()'.`);
-                        return [];
-                    })
-                    .then((result) => {
-                        this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
-                        return result;
-                    });
-            });
-        
-    }
-    /**
-     * Analyze project.
-     *
-     */
-    analyze(): Promise<void> {
-        return this.onReady
-            .then(() => { this.connection.console.info(`SERVER: analyze project.`) })
-            .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.project }) })
-            .then(() => this.linterhub.analyze())
-            .then((data: string) => this.sendDiagnostics(data))
-            .catch((reason) => { this.connection.console.error(`SERVER: error analyze project '${reason}.toString()'.`) })
-            .then(() => { this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.project }) })
-            .then(() => { this.connection.console.info(`SERVER: finish analyze project.`) });
-    }
-    /**
-     * Analyze single file.
-     *
-     * @param path The relative path to file.
-     * @param run The run mode (when).
-     * @param document The active document.
-     */
-    analyzeFile(path: string, run: Run = Run.none, document: TextDocument = null): Promise<void> {
-        if (this.settings.linterhub.run.indexOf(run) < 0) {
-            return null;
-        }
 
-        if (document != null) {
-            // TODO
-        }
-
-        return this.onReady
-            .then(() => this.connection.console.info(`SERVER: analyze file '${path}'.`))
-            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: path }))
-            .then(() => this.linterhub.analyzeFile(Uri.parse(path).fsPath))
-            .then((data: string) => this.sendDiagnostics(data, document))
-            .catch((reason) => { this.connection.console.error(`SERVER: error analyze file '${reason}.toString()'.`) })
-            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: path }))
-            .then(() => this.connection.console.info(`SERVER: finish analyze file '${path}'.`));
-    }
-    /**
-     * Get linters catalog.
-     *
-     */
-    catalog(): Promise<LinterResult[]> {
-        return this.onReady
-            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
-            .then(() => this.linterhub.catalog())
-            .then((data: string) => {
-                let json: any = JSON.parse(data);
-                this.connection.console.info(data);
-                return json;
-            })
-            .catch((reason) => {
-                this.connection.console.error(`SERVER: error catalog '${reason}.toString()'.`);
-                return [];
-            })
-            .then((result) => {
-                this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
-                return result;
-            });
-    }
-    /**
-     * Activate linter.
-     *
-     * @param path The linter name.
-     */
-    activate(name: string): Promise<string> {
-        return this.onReady
-            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
-            .then(() => this.linterhub.activate(name))
-            .catch((reason) => { this.connection.console.error(`SERVER: error activate '${reason}.toString()'.`) })
-            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId }))
-            .then(() => name);
-    }
-    /**
-     * Get the linter version.
-     *
-     * @param path The linter name.
-     */
-    linterVersion(name: string, install: boolean): Promise<LinterVersionResult> {
-        return this.onReady
-            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
-            .then(() => this.linterhub.linterVersion(name, install))
-            .then((data: string) => {
-                let json: LinterVersionResult = JSON.parse(data);
-                this.connection.console.info(data);
-                return json;
-            })
-            .catch((reason) => {
-                this.connection.console.error(`SERVER: error while requesting linter version '${reason}.toString()'.`);
-                return null;
-            })
-            .then((result) => {
-                this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId });
-                return result;
-            });
-    }
-
-    /**
-     * Deactivate linter.
-     *
-     * @param path The linter name.
-     */
-    deactivate(name: string): Promise<string> {
-        return this.onReady
-            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressStart, id: this.systemId }))
-            .then(() => this.linterhub.deactivate(name))
-            .catch((reason) => { this.connection.console.error(`SERVER: error deactivate '${reason}.toString()'.`) })
-            .then(() => this.connection.sendNotification(StatusNotification, { state: Status.progressEnd, id: this.systemId }))
-            .then(() => name);
-    }
     /**
      * Show diagnostic messages (results).
      *
      * @param data The raw data from CLI.
      */
-    private sendDiagnostics(data: any, document: any = null) {
+    protected sendDiagnostics(data: string, document: any = null): any[] {
         let json = JSON.parse(data);
         let files: any[] = [];
         let results: any[] = [];
@@ -243,6 +128,7 @@ export class Integration {
         for (let index = 0; index < results.length; index++) {
             this.connection.sendDiagnostics(results[index]);
         }
+        return results;
     }
     /**
      * Convert file result.
@@ -264,8 +150,7 @@ export class Integration {
      */
     private convertError(message: any, name: any): Diagnostic {
         let severity = DiagnosticSeverity.Warning;
-        switch(Number(message.Severity))
-        {
+        switch (Number(message.Severity)) {
             case 0: severity = DiagnosticSeverity.Error; break;
             case 1: severity = DiagnosticSeverity.Warning; break;
             case 2: severity = DiagnosticSeverity.Information; break;

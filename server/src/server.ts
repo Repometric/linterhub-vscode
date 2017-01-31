@@ -7,12 +7,13 @@ import {
 } from 'vscode-languageserver';
 import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from './shared/ide.vscode'
 
-import { Integration, Run } from './shared/ide.vscode.server'
+import { IntegrationVScode } from './shared/ide.vscode.server'
+import { Run } from 'linterhub-ide'
 
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
 
 let documents: TextDocuments = new TextDocuments();
-let integration: Integration = null;
+let integration: IntegrationVScode = null;
 
 documents.listen(connection);
 
@@ -30,7 +31,7 @@ documents.onDidClose(() => {
 
 connection.onInitialize((params): InitializeResult => {
 	connection.console.info("SERVER: start.");
-	integration = new Integration(params.rootPath, connection)
+	integration = new IntegrationVScode(params.rootPath, connection)
 	return {
 		capabilities: {
 			textDocumentSync: documents.syncKind
@@ -50,7 +51,7 @@ connection.onDidChangeConfiguration((params) => {
 	}).catch(function (reason) {
 		connection.console.error(reason.toString());
 		connection.console.error(reason.message);
-		connection.sendNotification(StatusNotification, { state: Status.noCli });
+		connection.sendNotification(StatusNotification, { state: Status.noCli, id: null });
 	});
 });
 
@@ -63,6 +64,7 @@ connection.onRequest(CatalogRequest, () => {
 
 connection.onRequest(ActivateRequest, (params) => {
 	if (params.activate) {
+		connection.console.info(JSON.stringify(params));
 		connection.console.info("SERVER: activate linter.");
 		return integration.activate(params.linter);
 	} else {

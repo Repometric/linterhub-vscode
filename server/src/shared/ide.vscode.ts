@@ -1,60 +1,11 @@
 import { NotificationType } from 'vscode-languageserver';
 import { RequestType } from 'vscode-languageserver'
+import {StatusParams, ActivateParams, CatalogResult, NoParams, LinterVersionParams, LinterVersionResult, AnalyzeParams, InstallResult} from 'linterhub-ide';
 
 export enum Status {
 	progressStart = 1,
 	progressEnd = 2,
 	noCli = 10
-}
-
-export interface NoParams {
-}
-
-export interface StatusParams {
-	id: string;
-	state: Status;
-}
-
-export interface ActivateParams {
-	activate: boolean;
-	linter: string;
-}
-
-export interface AnalyzeParams {
-	full: boolean;
-	path: string;
-}
-
-export interface LinterVersionParams {
-	linter: string;
-}
-
-export interface NoResult {
-}
-
-export interface LinterResult {
-	name: string;
-	description: string;
-	languages: string;
-}
-
-export interface LinterVersionResult {
-	LinterName: string;
-	Installed: boolean;
-	Version: string;
-}
-
-export interface CatalogResult {
-    linters: LinterResult[];
-}
-
-export interface InstallResult {
-	path: string;
-}
-
-export interface ConfigResult {
-	strictSSL: Boolean;
-	proxy: string;
 }
 
 export const StatusNotification: NotificationType<StatusParams> = { get method() { return 'linterhub/status'; } };
