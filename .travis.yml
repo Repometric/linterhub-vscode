@@ -2,7 +2,13 @@ language: node_js
 node_js:
   - "6"
 install:
-  - cd client && npm install && cd ../server && npm install
+  - cd client
+  - npm install
+  - cd ..
+  - cd server
+  - npm install
+  - cd ..
 script:
   - npm install -g vsce
+  - cd client
   - vsce package
