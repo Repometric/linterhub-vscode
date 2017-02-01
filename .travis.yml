@@ -3,3 +3,6 @@ node_js:
   - "6"
 install:
   - cd client && npm install && cd ../server && npm install
+script:
+  - npm install -g vsce
+  - vsce package
