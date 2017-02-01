@@ -1,14 +1,21 @@
 language: node_js
 node_js:
-  - "6"
+- '6'
 install:
-  - cd client
-  - npm install
-  - cd ..
-  - cd server
-  - npm install
-  - cd ..
+- cd client
+- npm install
+- cd ..
+- cd server
+- npm install
+- cd ..
 script:
-  - npm install -g vsce
-  - cd client
-  - vsce package
+- npm install -g vsce
+- cd client
+- vsce package --out ../linterhub.vsix
+- cd ..
+deploy:
+  provider: releases
+  skip_cleanup: true
+  file: linterhub.vsix
+  api_key:
+    secure: fKMc2WZC2ulRF7DZsdHiA0+XJcDMy7PQok5vXGHa2v8Di7vYmx4CqAh8MeLsBSaPqWFyd5esGMPgCZ1kEatm82j6MEkNGg7YyMKqmp+MnTa5A6aaHmzQRhEMbavGM77XpQdGg9NhcxjkUUX4b5eyd19pw3/28TOiaINo2WwI8qgRyZiRgZ0GssBd3jbTsZTpgwR1ZabNkOsZOgn6cvsiGqFeysYwLNyIP6T498Lsc6nO/Iux3z02GqFrkv5RKkTxgShyKpOwbiUrK4Xs6qQau+YhF00wSSLfFLeUVYO7l5k4DF/dOfi6j7M6rvtrUJaqSMEnuNA71XeRI9OfUKcrZ6CEKCKeoJ/wmDZnSQ0Z67GMg/GXolT7DaGmrSXDmU1PcWO11LmJJkwv+6stItO6cFzeUeHNPktdFwk9C6vm+2b8Cs1YcOFfwPbQdLfkUOcv4m1/jBb2g4o8JZDFs7zZ2zEI+Z6A8oWRFxtm6mmpejcpjDiP/W3wc3dl4upjehpCuYtquC8bdHyHx2YBVMkShJ9D9Feo5b5riFxhGvHMsQWlF94t20Fee3vLsk3pbzsBlVxM5YCV4+4rS+H+xJ/rkhk3eWnbd6vxJBirdtGF2gBHVvX9GmI5sCvr/dhQIifVuu1WA6IQwlf6HHM8Y5x7ilP5k1Sp+gL4fPKYAr26s7A=
