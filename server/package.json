@@ -1,7 +1,7 @@
 {
   "name": "linterhub-extension-server",
   "description": "Linterhub extension",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "author": "Repometric",
   "license": "MIT",
   "engines": {
@@ -14,7 +14,8 @@
     "mkdirp": "^0.5.1",
     "vscode-languageserver": "^2.6.2",
     "vscode-uri": "^1.0.0",
-    "yauzl": "^2.5.0"
+    "yauzl": "^2.5.0",
+    "linterhub-ide": "^0.1.4"
   },
   "devDependencies": {
     "typescript": "^2.0.3",
