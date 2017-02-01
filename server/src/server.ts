@@ -7,22 +7,22 @@ import {
 } from 'vscode-languageserver';
 import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from './shared/ide.vscode'
 
-import { IntegrationVScode } from './shared/ide.vscode.server'
-import { Run } from 'linterhub-ide'
+import { IntegrationLogic } from './shared/ide.vscode.server'
+import { Run, Settings, Integration } from 'linterhub-ide'
 
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
 
 let documents: TextDocuments = new TextDocuments();
-let integration: IntegrationVScode = null;
+let integration: Integration = null;
 
 documents.listen(connection);
 
 documents.onDidOpen((event) => {
-	integration.api.analyzeFile(event.document.uri, Run.onOpen, event.document);
+	integration.analyzeFile(event.document.uri, Run.onOpen, event.document);
 });
 
 documents.onDidSave((event) => {
-	integration.api.analyzeFile(event.document.uri, Run.onSave, event.document);
+	integration.analyzeFile(event.document.uri, Run.onSave, event.document);
 });
 
 documents.onDidClose(() => {
@@ -31,7 +31,11 @@ documents.onDidClose(() => {
 
 connection.onInitialize((params): InitializeResult => {
 	connection.console.info("SERVER: start.");
-	integration = new IntegrationVScode(params.rootPath, connection)
+	let settings: Settings;
+	//settings.linterhub.run = settings.linterhub.run.map(value => Run[value.toString()]);
+    //settings.linterhub.mode = LinterhubMode[settings.linterhub.mode.toString()];
+	let linterhub_version = "0.3.3";
+	integration = new Integration(new IntegrationLogic(params.rootPath, connection, linterhub_version), settings);
 	return {
 		capabilities: {
 			textDocumentSync: documents.syncKind
@@ -57,7 +61,7 @@ connection.onDidChangeConfiguration((params) => {
 
 connection.onRequest(CatalogRequest, () => {
 	connection.console.info("SERVER: get catalog.");
-	return integration.api.catalog().then(linters => {
+	return integration.catalog().then(linters => {
 		return { linters: linters };
 	});
 });
@@ -66,34 +70,34 @@ connection.onRequest(ActivateRequest, (params) => {
 	if (params.activate) {
 		connection.console.info(JSON.stringify(params));
 		connection.console.info("SERVER: activate linter.");
-		return integration.api.activate(params.linter);
+		return integration.activate(params.linter);
 	} else {
 		connection.console.info("SERVER: deactivate linter.");
-		return integration.api.deactivate(params.linter);
+		return integration.deactivate(params.linter);
 	}
 });
 
 connection.onRequest(LinterVersionRequest, (params) => {
 	connection.console.info("SERVER: request " + params.linter + " version...");
-	return integration.api.linterVersion(params.linter, false);
+	return integration.linterVersion(params.linter, false);
 });
 
 connection.onRequest(LinterInstallRequest, (params) => {
 	connection.console.info("SERVER: trying to install " + params.linter + "...");
-	return integration.api.linterVersion(params.linter, true);
+	return integration.linterVersion(params.linter, true);
 });
 
 connection.onRequest(AnalyzeRequest, (params) => {
 	if (params.full) {
-		return integration.api.analyze();
+		return integration.analyze();
 	} else {
-		return integration.api.analyzeFile(params.path, Run.force);
+		return integration.analyzeFile(params.path, Run.force);
 	}
 });
 
 connection.onRequest(InstallRequest, () => {
 	connection.console.info("SERVER: install cli.");
-	return integration.api.install().then((value) => { 
+	return integration.install().then((value) => { 
 		return { path: value }
 	});
 });
