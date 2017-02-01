@@ -18,11 +18,11 @@ let integration: IntegrationVScode = null;
 documents.listen(connection);
 
 documents.onDidOpen((event) => {
-	integration.analyzeFile(event.document.uri, Run.onOpen, event.document);
+	integration.api.analyzeFile(event.document.uri, Run.onOpen, event.document);
 });
 
 documents.onDidSave((event) => {
-	integration.analyzeFile(event.document.uri, Run.onSave, event.document);
+	integration.api.analyzeFile(event.document.uri, Run.onSave, event.document);
 });
 
 documents.onDidClose(() => {
@@ -57,7 +57,7 @@ connection.onDidChangeConfiguration((params) => {
 
 connection.onRequest(CatalogRequest, () => {
 	connection.console.info("SERVER: get catalog.");
-	return integration.catalog().then(linters => {
+	return integration.api.catalog().then(linters => {
 		return { linters: linters };
 	});
 });
@@ -66,34 +66,34 @@ connection.onRequest(ActivateRequest, (params) => {
 	if (params.activate) {
 		connection.console.info(JSON.stringify(params));
 		connection.console.info("SERVER: activate linter.");
-		return integration.activate(params.linter);
+		return integration.api.activate(params.linter);
 	} else {
 		connection.console.info("SERVER: deactivate linter.");
-		return integration.deactivate(params.linter);
+		return integration.api.deactivate(params.linter);
 	}
 });
 
 connection.onRequest(LinterVersionRequest, (params) => {
 	connection.console.info("SERVER: request " + params.linter + " version...");
-	return integration.linterVersion(params.linter, false);
+	return integration.api.linterVersion(params.linter, false);
 });
 
 connection.onRequest(LinterInstallRequest, (params) => {
 	connection.console.info("SERVER: trying to install " + params.linter + "...");
-	return integration.linterVersion(params.linter, true);
+	return integration.api.linterVersion(params.linter, true);
 });
 
 connection.onRequest(AnalyzeRequest, (params) => {
 	if (params.full) {
-		return integration.analyze();
+		return integration.api.analyze();
 	} else {
-		return integration.analyzeFile(params.path, Run.force);
+		return integration.api.analyzeFile(params.path, Run.force);
 	}
 });
 
 connection.onRequest(InstallRequest, () => {
 	connection.console.info("SERVER: install cli.");
-	return integration.install().then((value) => { 
+	return integration.api.install().then((value) => { 
 		return { path: value }
 	});
 });

@@ -1,5 +1,5 @@
-import { LinterhubMode, Integration, Settings, Run, LoggerInterface, StatusInterface, ConfigResult } from 'linterhub-ide'
-import { Status, StatusNotification, ConfigRequest } from './ide.vscode'
+import { LinterhubMode, Integration, Settings, Run, LoggerInterface, StatusInterface } from 'linterhub-ide'
+import { Status, StatusNotification } from './ide.vscode'
 import { IConnection, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
 import Uri from 'vscode-uri'
 
@@ -54,55 +54,33 @@ class StatusLogger implements StatusInterface
     }
 }
 
-export class IntegrationVScode extends Integration {
-    private connection: IConnection;
-    protected settings: Settings;
-    protected linterhub_version: string = "0.3.3";
-    protected logger: Logger;
-    protected status: StatusLogger;
+class IntegrationLogic
+{
+    public connection: IConnection;
+    public linterhub_version: string;
+    public logger: Logger;
+    public status: StatusLogger;
+    public project: string;
 
     protected sendNotification(params: any, progress: boolean): void {
         params.state = progress ? Status.progressStart : Status.progressEnd;
         this.connection.sendNotification(StatusNotification, params)
     }
 
-    protected normalizePath(path: string): string
+    public normalizePath(path: string): string
     {
         return Uri.parse(path).fsPath;
     }
 
-    constructor(project: string, connection: IConnection) {
-        super();
-        this.project = project;
+    constructor(project: string, connection: IConnection, version: string) {
         this.connection = connection;
         this.logger = new Logger(this.connection);
         this.status = new StatusLogger(this.connection);
+        this.project = project;
+        this.linterhub_version = version;
     }
 
-    initialize(settings: Settings = null) {
-        this.settings = settings;
-        this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
-        this.settings.linterhub.mode = LinterhubMode[this.settings.linterhub.mode.toString()];
-        this.connection.sendRequest(ConfigRequest)
-            .then((x: ConfigResult) => { this.connection.console.info(x.proxy); });
-
-        return this.initializeLinterhub();
-
-        /*
-        i.install(this.settings.linterhub.mode, null, true, this.connection.console).catch(e => {
-            this.connection.console.error(e.toString());
-        }).then(x => {
-            this.connection.console.info('installed!');
-        });
-*/
-    }
-
-    /**
-     * Show diagnostic messages (results).
-     *
-     * @param data The raw data from CLI.
-     */
-    protected sendDiagnostics(data: string, document: any = null): any[] {
+    public sendDiagnostics(data: string, document: any = null): any[] {
         let json = JSON.parse(data);
         let files: any[] = [];
         let results: any[] = [];
@@ -169,5 +147,32 @@ export class IntegrationVScode extends Integration {
             message: message.Message,
             source: "linterhub:" + name
         };
+    }
+}
+
+export class IntegrationVScode {
+    private connection: IConnection;
+    private linterhub_version: string = "0.3.3";
+    public api: Integration;
+    private settings: Settings;
+    private project: string;
+
+    constructor(project: string, connection: IConnection) {
+        this.project = project;
+        this.connection = connection;
+    }
+
+    initialize(settings: Settings = null) {
+        
+        this.settings = settings;
+        this.settings.linterhub.run = this.settings.linterhub.run.map(value => Run[value.toString()]);
+        this.settings.linterhub.mode = LinterhubMode[this.settings.linterhub.mode.toString()];
+
+        this.api = new Integration(new IntegrationLogic(this.project, this.connection, this.linterhub_version), this.settings);
+
+        //this.connection.sendRequest(ConfigRequest)
+        //    .then((x: ConfigResult) => { this.connection.console.info(x.proxy); });
+
+        return this.api.initializeLinterhub();
     }
 }
