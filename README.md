@@ -1,4 +1,7 @@
-# Linterhub VSCode Extension
+Linterhub VSCode Extension
+=====
+[![Build Status](https://travis-ci.org/Repometric/linterhub-vscode.svg?branch=master)](https://travis-ci.org/Repometric/linterhub-vscode)
+
 This is an extension for vsc that analyze your code using different linters.
 Extension needs:
 * Docker (or Docker Toolbox)
