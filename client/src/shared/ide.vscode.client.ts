@@ -66,7 +66,7 @@ export class Integration {
             .then(item => {
                 if (item) {
                     let name = item.label;
-                    return this.client.sendRequest(ActivateRequest, { activate: false, linter: name })
+                    return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                         .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully deactivated.`));
                 } else {
                     return null;

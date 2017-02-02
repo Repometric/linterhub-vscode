@@ -1,15 +1,15 @@
-import { LoggerInterface, StatusInterface } from 'linterhub-ide'
-import { Status, StatusNotification } from './ide.vscode'
+import { Settings, StatusInterface, LoggerInterface } from 'linterhub-ide'
 import { IConnection, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
 import Uri from 'vscode-uri'
 
-class FileResult {
+class FileResult
+{
     public readonly uri: string;
     public diagnostics: Diagnostic[];
-    constructor(uri: string, diagnostics: Diagnostic[]) {
+	constructor (uri: string, diagnostics: Diagnostic[]) {
         this.uri = uri;
         this.diagnostics = diagnostics;
-    }
+	}
 }
 
 class Logger implements LoggerInterface
@@ -54,23 +54,15 @@ class StatusLogger implements StatusInterface
     }
 }
 
-export class IntegrationLogic
-{
-    public connection: IConnection;
+
+
+export class IntegrationLogic {
     public linterhub_version: string;
-    public logger: Logger;
-    public status: StatusLogger;
+    public logger: LoggerInterface;
+    public connection: IConnection;
+    public status: StatusInterface;
     public project: string;
 
-    protected sendNotification(params: any, progress: boolean): void {
-        params.state = progress ? Status.progressStart : Status.progressEnd;
-        this.connection.sendNotification(StatusNotification, params)
-    }
-
-    public normalizePath(path: string): string
-    {
-        return Uri.parse(path).fsPath;
-    }
 
     constructor(project: string, connection: IConnection, version: string) {
         this.connection = connection;
@@ -80,7 +72,23 @@ export class IntegrationLogic
         this.linterhub_version = version;
     }
 
-    public sendDiagnostics(data: string, document: any = null): any[] {
+
+    public normalizePath(path_: string)
+    {
+        return Uri.parse(path_).fsPath;
+    }
+
+    public saveConfig(settings: Settings)
+    {
+        settings = null;
+    }
+
+    /**
+     * Show diagnostic messages (results).
+     *
+     * @param data The raw data from CLI.
+     */
+    public sendDiagnostics(data: any, document: any = null) {
         let json = JSON.parse(data);
         let files: any[] = [];
         let results: any[] = [];
@@ -106,7 +114,6 @@ export class IntegrationLogic
         for (let index = 0; index < results.length; index++) {
             this.connection.sendDiagnostics(results[index]);
         }
-        return results;
     }
     /**
      * Convert file result.
@@ -128,7 +135,8 @@ export class IntegrationLogic
      */
     private convertError(message: any, name: any): Diagnostic {
         let severity = DiagnosticSeverity.Warning;
-        switch (Number(message.Severity)) {
+        switch(Number(message.Severity))
+        {
             case 0: severity = DiagnosticSeverity.Error; break;
             case 1: severity = DiagnosticSeverity.Warning; break;
             case 2: severity = DiagnosticSeverity.Information; break;
