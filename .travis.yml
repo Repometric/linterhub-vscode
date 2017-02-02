@@ -2,22 +2,14 @@ language: node_js
 node_js:
 - '6'
 install:
-- cd client
-- npm install
-- cd ..
-- cd server
-- npm install
-- cd ..
+- sh script/setup.sh
 script:
-- npm install -g vsce
-- cd client
-- vsce package --out ../linterhub.vsix
-- cd ..
+- sh script/cibuild.sh
 deploy:
   provider: releases
   skip_cleanup: true
   overwrite: true
-  file: linterhub.vsix
+  file: bin/linterhub.vsix
   on: 
     tags: true
   api_key:
