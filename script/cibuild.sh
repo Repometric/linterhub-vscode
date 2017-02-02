@@ -1,5 +1,5 @@
 npm install -g vsce && \
-mkdir bin && \
+mkdir -p bin && \
 cd client && \
 vsce package --out ../bin/linterhub.vsix && \
 cd ..

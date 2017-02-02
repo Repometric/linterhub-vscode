@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
-		"target": "es6",
 		"module": "commonjs",
+		"target": "es6",
 		"moduleResolution": "node",
 		"outDir": "../client/server",
 		"lib": [ "es6" ],
