@@ -14,6 +14,11 @@ export interface StatusParams {
 	state: Status;
 }
 
+export interface UpdateConfigParams {
+	cliPath: string;
+	mode: any;
+}
+
 export interface ActivateParams {
 	activate: boolean;
 	linter: string;
@@ -62,5 +67,6 @@ export const CatalogRequest: RequestType<NoParams, CatalogResult, void> = { get 
 export const AnalyzeRequest: RequestType<AnalyzeParams, void, void> = { get method() { return 'linterhub/analyze'; } };
 export const InstallRequest: RequestType<NoParams, InstallResult, void> = { get method() { return 'linterhub/install'; } };
 export const ConfigRequest: RequestType<NoParams, any, void> = { get method() { return 'linterhub/config'; } };
+export const UpdateConfigRequest: RequestType<UpdateConfigParams, any, void> = { get method() { return 'linterhub/updateconfig'; } };
 export const LinterVersionRequest: RequestType<LinterVersionParams, LinterVersionResult, void> = { get method() { return 'linterhub/linterVersion'; } };
 export const LinterInstallRequest: RequestType<LinterVersionParams, LinterVersionResult, void> = { get method() { return 'linterhub/linterInstall'; } };

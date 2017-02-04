@@ -1,6 +1,7 @@
 import { Settings, StatusInterface, LoggerInterface } from 'linterhub-ide'
 import { IConnection, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
 import Uri from 'vscode-uri'
+import { UpdateConfigRequest, StatusNotification, Status } from './ide.vscode'
 
 class FileResult
 {
@@ -48,8 +49,8 @@ class StatusLogger implements StatusInterface
 
     public update(params: any, progress?: boolean, text?: string)
     {
-        params = null;
-        progress = null;
+        let id: string = (params.id).toString();
+        this.connection.sendNotification(StatusNotification, { state: progress ? Status.progressStart : Status.progressEnd, id: id });
         this.connection.console.info(this.prefix + text);
     }
 }
@@ -80,7 +81,7 @@ export class IntegrationLogic {
 
     public saveConfig(settings: Settings)
     {
-        settings = null;
+         this.connection.sendRequest(UpdateConfigRequest, { cliPath: settings.linterhub.cliPath, mode: settings.linterhub.mode });
     }
 
     /**
@@ -149,8 +150,8 @@ export class IntegrationLogic {
         return {
             severity: severity,
             range: {
-                start: { line: row.Start - 1, character: column.Start },
-                end: { line: row.End - 1, character: column.End }
+                start: { line: row.Start, character: column.Start },
+                end: { line: row.End, character: column.End }
             },
             message: message.Message,
             source: "linterhub:" + name

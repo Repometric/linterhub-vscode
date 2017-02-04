@@ -8,6 +8,11 @@ export enum Status {
 	noCli = 10
 }
 
+export interface UpdateConfigParams {
+	cliPath: string;
+	mode: any;
+}
+
 export const StatusNotification: NotificationType<StatusParams> = { get method() { return 'linterhub/status'; } };
 export const ActivateRequest: RequestType<ActivateParams, string, void> = { get method() { return 'linterhub/activate'; } };
 export const CatalogRequest: RequestType<NoParams, CatalogResult, void> = { get method() { return 'linterhub/catalog'; } };
@@ -16,3 +21,4 @@ export const InstallRequest: RequestType<NoParams, InstallResult, void> = { get 
 export const ConfigRequest: RequestType<NoParams, any, void> = { get method() { return 'linterhub/config'; } };
 export const LinterVersionRequest: RequestType<LinterVersionParams, LinterVersionResult, void> = { get method() { return 'linterhub/linterVersion'; } };
 export const LinterInstallRequest: RequestType<LinterVersionParams, LinterVersionResult, void> = { get method() { return 'linterhub/linterInstall'; } };
+export const UpdateConfigRequest: RequestType<UpdateConfigParams, any, void> = { get method() { return 'linterhub/updateconfig'; } };

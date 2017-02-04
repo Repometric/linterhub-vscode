@@ -4,7 +4,7 @@ import * as path from 'path';
 import { workspace, ExtensionContext } from 'vscode';
 import { window, commands } from 'vscode';
 import { LanguageClient, LanguageClientOptions, TransportKind, ServerOptions } from 'vscode-languageclient';
-import { StatusNotification, ConfigRequest } from './shared/ide.vscode'
+import { StatusNotification, ConfigRequest, UpdateConfigRequest } from './shared/ide.vscode'
 import { Integration } from './shared/ide.vscode.client'
 
 export function activate(context: ExtensionContext) {
@@ -33,6 +33,14 @@ export function activate(context: ExtensionContext) {
 				proxy: config.get<string>('http.proxy'),
 				strictSSL: config.get('http.proxyStrictSSL', true)
 			};
+		});
+
+		client.onRequest(UpdateConfigRequest, (params) =>
+		{
+			let config: any = workspace.getConfiguration('linterhub');
+            config.update('cliPath', params.cliPath, true);
+			config.update('mode', params.mode, true);
+			return true;
 		});
 
 		return client.onReady().then(() => {
