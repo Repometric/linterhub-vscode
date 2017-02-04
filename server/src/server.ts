@@ -50,7 +50,6 @@ connection.onDidChangeConfiguration((params) => {
 	{
 		params.settings.linterhub.run[i] = Run[params.settings.linterhub.run[i]];
 	}
-	connection.console.info(JSON.stringify(params.settings));
 	params.settings.linterhub.cliRoot = path.join(__dirname, "/../")
 	integration = new Integration(new IntegrationLogic(projectRoot, connection, "0.3.3"), params.settings)
 	integration.version().then(version => {

@@ -49,7 +49,9 @@ class StatusLogger implements StatusInterface
 
     public update(params: any, progress?: boolean, text?: string)
     {
-        let id: string = (params.id).toString();
+        let id: string;
+        if(params != null)
+            id = (params.id).toString();
         this.connection.sendNotification(StatusNotification, { state: progress ? Status.progressStart : Status.progressEnd, id: id });
         this.connection.console.info(this.prefix + text);
     }
