@@ -5,10 +5,11 @@ import {
 	TextDocuments,
 	IPCMessageReader, IPCMessageWriter
 } from 'vscode-languageserver';
-import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from './shared/ide.vscode'
+import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from './shared/ide.vscode'
 
 import { IntegrationLogic } from './shared/ide.vscode.server'
 import { Integration, Run, } from 'linterhub-ide'
+import * as path from 'path'
 
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
 
@@ -45,8 +46,14 @@ connection.onShutdown(() => {
 
 connection.onDidChangeConfiguration((params) => {
 	connection.console.info("SERVER: initialize.");
+	for(let i = 0; i < params.settings.linterhub.run.length; ++i)
+	{
+		params.settings.linterhub.run[i] = Run[params.settings.linterhub.run[i]];
+	}
+	connection.console.info(JSON.stringify(params.settings));
+	params.settings.linterhub.cliRoot = path.join(__dirname, "/../")
 	integration = new Integration(new IntegrationLogic(projectRoot, connection, "0.3.3"), params.settings)
-	integration.initialize(params.settings).then(version => {
+	integration.version().then(version => {
 		connection.console.info("SERVER: " + version.toString().replace(/(?:\r\n|\r|\n)/g, ', '));
 	}).catch(function (reason) {
 		connection.console.error(reason.toString());
@@ -88,13 +95,6 @@ connection.onRequest(AnalyzeRequest, (params) => {
 	} else {
 		return integration.analyzeFile(params.path, Run.force);
 	}
-});
-
-connection.onRequest(InstallRequest, () => {
-	connection.console.info("SERVER: install cli.");
-	return integration.install().then((value) => { 
-		return { path: value }
-	});
 });
 
 connection.listen();

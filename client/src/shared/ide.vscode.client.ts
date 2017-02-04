@@ -1,5 +1,5 @@
-import { InstallRequest, ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams, LinterVersionRequest, LinterInstallRequest } from './ide.vscode'
-import { window, workspace, commands, Uri, StatusBarAlignment, TextEditor } from 'vscode';
+import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams, LinterVersionRequest, LinterInstallRequest } from './ide.vscode'
+import { window, StatusBarAlignment, TextEditor } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
 import * as utils from './utils'
 
@@ -66,7 +66,7 @@ export class Integration {
             .then(item => {
                 if (item) {
                     let name = item.label;
-                    return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
+                    return this.client.sendRequest(ActivateRequest, { activate: false, linter: name })
                         .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully deactivated.`));
                 } else {
                     return null;
@@ -77,7 +77,6 @@ export class Integration {
         return this.client.outputChannel.show();
     }
     updateStatus(params: StatusParams) {
-        let that = this;
         if (params.state == Status.progressStart) {
             return this.progressControl.update(params.id, true);
         }
@@ -85,21 +84,9 @@ export class Integration {
             return this.progressControl.update(params.id, false);
         }
         if (params.state == Status.noCli) {
-            return window.showWarningMessage("Unable to find Linterhub cli.", 'Install', 'Visit Website').then(function (selection) {
-                if (selection === 'Visit Website') {
-                    return commands.executeCommand('vscode.open', Uri.parse('https://google.com'));
-                }
-                if (selection === 'Install') {
-                    return that.client.sendRequest(InstallRequest, { })
-                        .then((params) => {
-                            let config: any = workspace.getConfiguration('linterhub');
-                            return config.update('cliPath', params.path, true);
-                        })
-                        .then(() => window.showInformationMessage(`Linterhub cli was installed.`));
-                }
-                return null;
-            });
+            return this.progressControl.update(params.id, false);
         }
+
     }
     statusBarItem: any;
     progressBarItem: any;
