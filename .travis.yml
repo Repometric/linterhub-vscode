@@ -1,8 +1,6 @@
 language: node_js
 node_js:
 - '6'
-install:
-- sh script/setup.sh
 script:
 - sh script/cibuild.sh
 deploy:

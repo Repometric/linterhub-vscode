@@ -1,7 +1,12 @@
-npm install -g vsce && \
+#/bin/sh
+
+sh script/update.sh
+
+echo "==> npm: install vsce"
+npm install -g vsce
+
+echo "==> app: package"
 mkdir -p bin && \
-cd src && \
-cd client && \
+cd src/client && \
 vsce package --out ../../bin/linterhub.vsix && \
-cd .. && \
-cd ..
+cd ../..

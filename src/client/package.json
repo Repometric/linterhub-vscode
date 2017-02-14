@@ -1,5 +1,6 @@
 {
   "name": "linterhub",
+  "displayName": "Linterhub",
   "description": "Linterhub extension",
   "author": "Repometric",
   "license": "MIT",
@@ -8,8 +9,9 @@
   "engines": {
     "vscode": "^1.4.0"
   },
+  "icon": "icon.svg",
   "categories": [
-    "Other"
+    "Linters"
   ],
   "activationEvents": [
     "*"
@@ -53,8 +55,8 @@
           "description": "Controls whether linterhub is enabled or not."
         },
         "linterhub.cliPath": {
-          "type": "string",
-          "default": "/Volumes/Repositories/Repometric/linterhub-cli/src/cli/bin/",
+          "type": ["string", "null"],
+          "default": null,
           "description": "A path of Linterhub CLI."
         },
         "linterhub.run": {
@@ -62,9 +64,7 @@
           "items": {
             "type": "string",
             "enum": [
-              "onStart",
               "onOpen",
-              "onType",
               "onSave"
             ]
           },
@@ -72,7 +72,7 @@
             "onOpen",
             "onSave"
           ],
-          "description": "Run type."
+          "description": "Run linterhub on save (onSave) or on open (onOpen)."
         },
         "linterhub.mode": {
           "type": "string",
@@ -82,7 +82,28 @@
             "docker"
           ],
           "default": "native",
-          "description": "Run mode."
+          "description": "CLI run mode (dotnet, native or docker)."
+        },
+        "linterhub.languages": {
+          "type": "array",
+          "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "language": {
+                      "type": "string",
+                      "description": "The language id to be validated."
+                    }
+                  }
+                }
+              ]
+          },
+          "default": ["coffeescript", "javascript", "css", "html", "scss", "sass", "typescript"],
+          "description": "An array of language ids which should be validated."
         }
       }
     }
