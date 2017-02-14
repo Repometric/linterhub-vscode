@@ -1,6 +1,6 @@
-#/bin/sh
+#!/bin/bash
 
-sh script/bootstrap.sh
+bash script/bootstrap.sh
 
 # npm dependencies
 echo "==> npm: server dependencies"

@@ -1,6 +1,6 @@
-#/bin/sh
+#!/bin/bash
 
-sh script/update.sh
+bash script/update.sh
 
 echo "==> npm: install vsce"
 npm install -g vsce

@@ -2,7 +2,7 @@ language: node_js
 node_js:
 - '6'
 script:
-- sh script/cibuild.sh
+- bash script/cibuild.sh
 deploy:
   provider: releases
   skip_cleanup: true

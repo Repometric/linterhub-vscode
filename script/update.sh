@@ -1,6 +1,6 @@
-#/bin/sh
+#!/bin/bash
 
-sh script/setup.sh
+bash script/setup.sh
 
 # npm dependencies
 echo "==> npm: build server"
