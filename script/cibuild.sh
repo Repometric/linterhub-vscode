@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 bash script/update.sh
 
 echo "==> npm: install vsce"

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 bash script/bootstrap.sh
 
 # npm dependencies

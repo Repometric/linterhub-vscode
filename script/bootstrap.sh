@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # git
 which -s git
 if [[ $? != 0 ]] ; then

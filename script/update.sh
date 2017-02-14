@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 bash script/setup.sh
 
 # npm dependencies
