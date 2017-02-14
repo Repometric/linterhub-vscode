@@ -4,6 +4,13 @@
   "version": "0.3.3",
   "author": "Repometric",
   "license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/repometric/linterhub-vscode.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Repometric/linterhub-vscode/issues"
+	},
   "engines": {
     "node": "*"
   },
