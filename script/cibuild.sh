@@ -2,6 +2,7 @@
 
 set -e
 bash script/update.sh
+echo "==> app: cibuild"
 
 echo "==> npm: install vsce"
 npm install -g vsce

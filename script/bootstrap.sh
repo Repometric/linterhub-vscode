@@ -1,9 +1,10 @@
 #!/bin/bash
 
 set -e
+echo "==> app: bootstrap"
 
 # git
-which -s git
+which git
 if [[ $? != 0 ]] ; then
     echo "==> git: not installed"
     exit 1
@@ -11,7 +12,7 @@ fi
 echo "==> git: " && git --version
 
 # node
-which -s node
+which node
 if [[ $? != 0 ]] ; then
     echo "==> node: not installed"
     exit 1
@@ -19,7 +20,7 @@ fi
 echo "==> node: " && node --version
 
 # npm
-which -s npm
+which npm
 if [[ $? != 0 ]] ; then
     echo "==> npm: not installed"
     exit 1

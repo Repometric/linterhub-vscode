@@ -2,6 +2,7 @@
 
 set -e
 bash script/bootstrap.sh
+echo "==> app: setup"
 
 # npm dependencies
 echo "==> npm: server dependencies"
