@@ -1,4 +1,4 @@
-import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, LinterVersionRequest, LinterInstallRequest } from './ide.vscode'
+import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, LinterVersionRequest, LinterInstallRequest, IgnoreWarningRequest } from './ide.vscode'
 import { Types } from 'linterhub-ide'
 import { window, StatusBarAlignment, TextEditor } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
@@ -19,6 +19,9 @@ export class Integration {
     }
     analyzeFile(path: string): Thenable<void> {
         return this.client.sendRequest(AnalyzeRequest, { path: path });
+    }
+    ignoreWarning(params: Types.IgnoreWarningParams): Thenable<string> {
+        return this.client.sendRequest(IgnoreWarningRequest, params);
     }
     selectLinter() {
         // TODO: Show added-and-active(for deactivate)/missing-or-not-active(for activate) linters?

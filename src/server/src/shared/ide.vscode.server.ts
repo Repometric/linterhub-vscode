@@ -3,54 +3,45 @@ import { IConnection, Diagnostic, DiagnosticSeverity } from 'vscode-languageserv
 import Uri from 'vscode-uri'
 import { UpdateConfigRequest, StatusNotification, Status } from './ide.vscode'
 
-class FileResult
-{
+class FileResult {
     public readonly uri: string;
     public diagnostics: Diagnostic[];
-	constructor (uri: string, diagnostics: Diagnostic[]) {
+    constructor(uri: string, diagnostics: Diagnostic[]) {
         this.uri = uri;
         this.diagnostics = diagnostics;
-	}
+    }
 }
 
-class Logger implements LoggerInterface
-{
+class Logger implements LoggerInterface {
     private connection: IConnection;
     private prefix: string = "SERVER: ";
 
-    constructor(connection: IConnection)
-    {
+    constructor(connection: IConnection) {
         this.connection = connection;
     }
 
-    public info(string: string): void
-    {
+    public info(string: string): void {
         this.connection.console.info(this.prefix + string);
     }
-    public error(string: string): void
-    {
+    public error(string: string): void {
         this.connection.console.error(this.prefix + string);
     }
-    public warn(string: string): void
-    {
+    public warn(string: string): void {
         this.connection.console.warn(this.prefix + string);
     }
 }
 
-class StatusLogger implements StatusInterface
-{
+class StatusLogger implements StatusInterface {
     private connection: IConnection;
     private prefix: string = "SERVER: ";
 
-    constructor(connection: IConnection)
-    {
+    constructor(connection: IConnection) {
         this.connection = connection;
     }
 
-    public update(params: any, progress?: boolean, text?: string)
-    {
+    public update(params: any, progress?: boolean, text?: string) {
         let id: string;
-        if(params != null)
+        if (params != null)
             id = (params.id).toString();
         this.connection.sendNotification(StatusNotification, { state: progress ? Status.progressStart : Status.progressEnd, id: id });
         this.connection.console.info(this.prefix + text);
@@ -76,14 +67,12 @@ export class IntegrationLogic {
     }
 
 
-    public normalizePath(path_: string)
-    {
+    public normalizePath(path_: string): string {
         return Uri.parse(path_).fsPath;
     }
 
-    public saveConfig(settings: Settings)
-    {
-         this.connection.sendRequest(UpdateConfigRequest, { cliPath: settings.linterhub.cliPath, mode: settings.linterhub.mode });
+    public saveConfig(settings: Settings): void {
+        this.connection.sendRequest(UpdateConfigRequest, { cliPath: settings.linterhub.cliPath, mode: settings.linterhub.mode });
     }
 
     /**
@@ -124,9 +113,12 @@ export class IntegrationLogic {
      * @param file The file object.
      * @param name The linter name.
      */
+    public constructURI(path: string): string {
+        return 'file://' + this.project + '/' + path;
+    }
     private getFileResult(file: any, name: any, document: any): FileResult {
         // TODO: Construct it as URI.
-        let fullPath = document != null ? document.uri : 'file://' + this.project + '\\' + file.Path;
+        let fullPath = document != null ? document.uri : this.constructURI(file.Path);
         let diagnostics = file.Errors.map((error: any) => this.convertError(error, name));
         return new FileResult(fullPath.toString(), diagnostics);
     }
@@ -138,8 +130,7 @@ export class IntegrationLogic {
      */
     private convertError(message: any, name: any): Diagnostic {
         let severity = DiagnosticSeverity.Warning;
-        switch(Number(message.Severity))
-        {
+        switch (Number(message.Severity)) {
             case 0: severity = DiagnosticSeverity.Error; break;
             case 1: severity = DiagnosticSeverity.Warning; break;
             case 2: severity = DiagnosticSeverity.Information; break;
@@ -156,7 +147,8 @@ export class IntegrationLogic {
                 end: { line: row.End, character: column.End }
             },
             message: message.Message,
-            source: "linterhub:" + name
+            source: "linterhub:" + name,
+            code: message.Rule.Name
         };
     }
 }

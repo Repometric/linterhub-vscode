@@ -13,6 +13,7 @@ export interface UpdateConfigParams {
 	mode: any;
 }
 
+export const IgnoreWarningRequest: RequestType<Types.IgnoreWarningParams, string, void> = { get method() { return 'linterhub/ignoreWarning'; } };
 export const StatusNotification: NotificationType<Types.StatusParams> = { get method() { return 'linterhub/status'; } };
 export const ActivateRequest: RequestType<Types.ActivateParams, string, void> = { get method() { return 'linterhub/activate'; } };
 export const CatalogRequest: RequestType<Types.NoParams, Types.CatalogResult, void> = { get method() { return 'linterhub/catalog'; } };
