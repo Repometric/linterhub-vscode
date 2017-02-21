@@ -114,9 +114,9 @@ connection.onCodeAction((params) => {
 				{ line: null, file: uri, error: diagnostic.code }));
 		result.push(
 			Command.create(
-				'Ignore ' + diagnostic.code + ' on line ' + diagnostic.range.start.line,
+				'Ignore ' + diagnostic.code + ' on line ' + (diagnostic.range.start.line + 1),
 				'linterhub.ignoreWarning',
-				{ line: diagnostic.range.start.line, file: uri, error: diagnostic.code }));
+				{ line: diagnostic.range.start.line + 1, file: uri, error: diagnostic.code }));
 	});
 	if (diagnostics.length > 0) {
 		result.push(

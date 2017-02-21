@@ -139,12 +139,11 @@ export class IntegrationLogic {
 
         let row = message.Row || { Start: message.Line, End: message.Line };
         let column = message.Column;
-        // TODO: Do we need -1 for rows?
         return {
             severity: severity,
             range: {
-                start: { line: row.Start, character: column.Start },
-                end: { line: row.End, character: column.End }
+                start: { line: row.Start - 1, character: column.Start },
+                end: { line: row.End - 1, character: column.End }
             },
             message: message.Message,
             source: "linterhub:" + name,
