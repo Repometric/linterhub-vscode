@@ -1,5 +1,5 @@
-import { Settings, StatusInterface, LoggerInterface } from 'linterhub-ide'
-import { IConnection, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
+import { Settings, StatusInterface, LoggerInterface, AnalyzeResultInterface, AnalyzeFileInterface, AnalyzeErrorInterface } from 'linterhub-ide'
+import { IConnection, Diagnostic, DiagnosticSeverity, PublishDiagnosticsParams } from 'vscode-languageserver';
 import Uri from 'vscode-uri'
 import { UpdateConfigRequest, StatusNotification, Status } from './ide.vscode'
 
@@ -80,19 +80,19 @@ export class IntegrationLogic {
      *
      * @param data The raw data from CLI.
      */
-    public sendDiagnostics(data: any, document: any = null) {
-        let json = JSON.parse(data);
-        let files: any[] = [];
-        let results: any[] = [];
+    public sendDiagnostics(data: string, document: any = null) {
+        let json: AnalyzeResultInterface[] = JSON.parse(data);
+        let files: string[] = [];
+        let results: PublishDiagnosticsParams[] = [];
         // TODO: Simplify logic.
         // Iterate linters
         for (let index = 0; index < json.length; index++) {
             var linterResult = json[index];
             // Iterate files in linter result
-            linterResult.Model.Files.forEach((file: any) => {
+            linterResult.Model.Files.forEach((file: AnalyzeFileInterface) => {
                 let result: FileResult = this.getFileResult(file, linterResult.Name, document);
                 // Group messages by file name
-                let fileIndex = files.indexOf(file.Path);
+                let fileIndex: number = files.indexOf(file.Path);
                 if (fileIndex < 0) {
                     files.push(file.Path);
                     results.push(result);
@@ -116,10 +116,10 @@ export class IntegrationLogic {
     public constructURI(path: string): string {
         return 'file://' + this.project + '/' + path;
     }
-    private getFileResult(file: any, name: any, document: any): FileResult {
+    private getFileResult(file: AnalyzeFileInterface, name: string, document: any): FileResult {
         // TODO: Construct it as URI.
         let fullPath = document != null ? document.uri : this.constructURI(file.Path);
-        let diagnostics = file.Errors.map((error: any) => this.convertError(error, name));
+        let diagnostics = file.Errors.map((error: AnalyzeErrorInterface) => this.convertError(error, name));
         return new FileResult(fullPath.toString(), diagnostics);
     }
     /**
@@ -128,7 +128,7 @@ export class IntegrationLogic {
      * @param message The message from CLI.
      * @param name The linter name.
      */
-    private convertError(message: any, name: any): Diagnostic {
+    private convertError(message: AnalyzeErrorInterface, name: string): Diagnostic {
         let severity = DiagnosticSeverity.Warning;
         switch (Number(message.Severity)) {
             case 0: severity = DiagnosticSeverity.Error; break;
@@ -138,7 +138,7 @@ export class IntegrationLogic {
         }
 
         let row = message.Row || { Start: message.Line, End: message.Line };
-        let column = message.Column || { Start: message.Character, End: message.Character };
+        let column = message.Column;
         // TODO: Do we need -1 for rows?
         return {
             severity: severity,

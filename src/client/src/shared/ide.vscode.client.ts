@@ -40,7 +40,7 @@ export class Integration {
                 if (item) {
                     let name = item.label;
                     return this.client.sendRequest(LinterVersionRequest, { linter: name })
-                        .then((result) => {
+                        .then((result: Types.LinterVersionResult) => {
                             if(result.Installed)
                                 return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                                     .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully activated.`));
@@ -48,7 +48,7 @@ export class Integration {
                             {
                                 window.showWarningMessage(`Linter "${name}" is not installed. Trying to install...`);
                                 return this.client.sendRequest(LinterInstallRequest, { linter: name })
-                                    .then((result) => {
+                                    .then((result: Types.LinterVersionResult) => {
                                         if(result.Installed)
                                             return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                                                 .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully installed and activated.`));
