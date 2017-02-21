@@ -1,4 +1,5 @@
-import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams, LinterVersionRequest, LinterInstallRequest } from './ide.vscode'
+import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, LinterVersionRequest, LinterInstallRequest } from './ide.vscode'
+import { Types } from 'linterhub-ide'
 import { window, StatusBarAlignment, TextEditor } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
 import * as utils from './utils'
@@ -76,7 +77,7 @@ export class Integration {
     showOutput(): void {
         return this.client.outputChannel.show();
     }
-    updateStatus(params: StatusParams) {
+    updateStatus(params: Types.StatusParams) {
         if (params.state == Status.progressStart) {
             return this.progressControl.update(params.id, true);
         }
