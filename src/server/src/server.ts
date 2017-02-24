@@ -3,18 +3,19 @@ import {
 	createConnection, IConnection,
 	InitializeResult,
 	TextDocuments,
-	IPCMessageReader, IPCMessageWriter
+	IPCMessageReader, IPCMessageWriter, Command, Diagnostic
 } from 'vscode-languageserver';
-import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from './shared/ide.vscode'
+import { ActivateRequest, AnalyzeRequest, IgnoreWarningRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from './shared/ide.vscode'
 
 import { IntegrationLogic } from './shared/ide.vscode.server'
-import { Integration, Run, } from 'linterhub-ide'
+import { Integration, Run, Types} from 'linterhub-ide'
 import * as path from 'path'
 
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
 
 let documents: TextDocuments = new TextDocuments();
 let integration: Integration = null;
+let integrationLogic: IntegrationLogic = null;
 let projectRoot: string = null;
 documents.listen(connection);
 
@@ -35,7 +36,8 @@ connection.onInitialize((params): InitializeResult => {
 	projectRoot = params.rootPath;
 	return {
 		capabilities: {
-			textDocumentSync: documents.syncKind
+			textDocumentSync: documents.syncKind,
+			codeActionProvider: true
 		}
 	}
 });
@@ -46,12 +48,12 @@ connection.onShutdown(() => {
 
 connection.onDidChangeConfiguration((params) => {
 	connection.console.info("SERVER: initialize.");
-	for(let i = 0; i < params.settings.linterhub.run.length; ++i)
-	{
+	for (let i = 0; i < params.settings.linterhub.run.length; ++i) {
 		params.settings.linterhub.run[i] = Run[params.settings.linterhub.run[i]];
 	}
 	params.settings.linterhub.cliRoot = path.join(__dirname, "/../")
-	integration = new Integration(new IntegrationLogic(projectRoot, connection, "0.3.3"), params.settings)
+	integrationLogic = new IntegrationLogic(projectRoot, connection, "0.3.4");
+	integration = new Integration(integrationLogic, params.settings)
 	integration.version().then(version => {
 		connection.console.info("SERVER: " + version.toString().replace(/(?:\r\n|\r|\n)/g, ', '));
 	}).catch(function (reason) {
@@ -94,6 +96,36 @@ connection.onRequest(AnalyzeRequest, (params) => {
 	} else {
 		return integration.analyzeFile(params.path, Run.force);
 	}
+});
+
+connection.onRequest(IgnoreWarningRequest, (params: Types.IgnoreWarningParams) => {
+	return integration.ignoreWarning(params).then(() => integration.analyzeFile(integrationLogic.constructURI(params.file), Run.force));
+});
+
+connection.onCodeAction((params) => {
+	let result: Command[] = [];
+	let uri: string = path.relative(projectRoot, integrationLogic.normalizePath(params.textDocument.uri));
+	let diagnostics: Diagnostic[] = params.context.diagnostics;
+	diagnostics.forEach(diagnostic => {
+		result.push(
+			Command.create(
+				'Ignore ' + diagnostic.code + ' in this file',
+				'linterhub.ignoreWarning',
+				{ line: null, file: uri, error: diagnostic.code }));
+		result.push(
+			Command.create(
+				'Ignore ' + diagnostic.code + ' on line ' + (diagnostic.range.start.line + 1),
+				'linterhub.ignoreWarning',
+				{ line: diagnostic.range.start.line + 1, file: uri, error: diagnostic.code }));
+	});
+	if (diagnostics.length > 0) {
+		result.push(
+			Command.create(
+				`Ignore whole file`,
+				'linterhub.ignoreWarning',
+				{ line: null, file: uri, error: null }));
+	}
+	return result;
 });
 
 connection.listen();

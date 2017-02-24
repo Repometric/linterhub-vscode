@@ -1,4 +1,4 @@
-import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, LinterVersionRequest, LinterInstallRequest } from './ide.vscode'
+import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, LinterVersionRequest, LinterInstallRequest, IgnoreWarningRequest } from './ide.vscode'
 import { Types } from 'linterhub-ide'
 import { window, StatusBarAlignment, TextEditor } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
@@ -20,6 +20,9 @@ export class Integration {
     analyzeFile(path: string): Thenable<void> {
         return this.client.sendRequest(AnalyzeRequest, { path: path });
     }
+    ignoreWarning(params: Types.IgnoreWarningParams): Thenable<string> {
+        return this.client.sendRequest(IgnoreWarningRequest, params);
+    }
     selectLinter() {
         // TODO: Show added-and-active(for deactivate)/missing-or-not-active(for activate) linters?
         return this.client.sendRequest(CatalogRequest, { })
@@ -37,7 +40,7 @@ export class Integration {
                 if (item) {
                     let name = item.label;
                     return this.client.sendRequest(LinterVersionRequest, { linter: name })
-                        .then((result) => {
+                        .then((result: Types.LinterVersionResult) => {
                             if(result.Installed)
                                 return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                                     .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully activated.`));
@@ -45,7 +48,7 @@ export class Integration {
                             {
                                 window.showWarningMessage(`Linter "${name}" is not installed. Trying to install...`);
                                 return this.client.sendRequest(LinterInstallRequest, { linter: name })
-                                    .then((result) => {
+                                    .then((result: Types.LinterVersionResult) => {
                                         if(result.Installed)
                                             return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                                                 .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully installed and activated.`));

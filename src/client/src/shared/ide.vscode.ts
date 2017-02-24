@@ -14,6 +14,7 @@ export interface UpdateConfigParams {
 
 export const StatusNotification: NotificationType<Types.StatusParams> = { get method() { return 'linterhub/status'; } };
 export const ActivateRequest: RequestType<Types.ActivateParams, string, void> = { get method() { return 'linterhub/activate'; } };
+export const IgnoreWarningRequest: RequestType<Types.IgnoreWarningParams, string, void> = { get method() { return 'linterhub/ignoreWarning'; } };
 export const CatalogRequest: RequestType<Types.NoParams, Types.CatalogResult, void> = { get method() { return 'linterhub/catalog'; } };
 export const AnalyzeRequest: RequestType<Types.AnalyzeParams, void, void> = { get method() { return 'linterhub/analyze'; } };
 export const InstallRequest: RequestType<Types.NoParams, Types.InstallResult, void> = { get method() { return 'linterhub/install'; } };

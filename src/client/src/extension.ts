@@ -6,6 +6,7 @@ import { window, commands } from 'vscode';
 import { LanguageClient, LanguageClientOptions, TransportKind, ServerOptions } from 'vscode-languageclient';
 import { StatusNotification, ConfigRequest, UpdateConfigRequest } from './shared/ide.vscode'
 import { Integration } from './shared/ide.vscode.client'
+import { Types } from 'linterhub-ide'
 
 export function activate(context: ExtensionContext) {
 	let integration = new Integration(null);
@@ -52,6 +53,7 @@ export function activate(context: ExtensionContext) {
 				commands.registerCommand('linterhub.activate', () => integration.activate()),
 				commands.registerCommand('linterhub.deactivate', () => integration.deactivate()),
 				commands.registerCommand('linterhub.showOutput', () => integration.showOutput()),
+				commands.registerCommand('linterhub.ignoreWarning', (params: Types.IgnoreWarningParams) => integration.ignoreWarning(params)),
 				integration.statusBarItem,
 				disposable
 			);
