@@ -27,6 +27,15 @@ if [[ $? != 0 ]] ; then
 fi
 echo "==> npm: " && npm --version
 
+npm install -g typescript
+# tsc
+which tsc
+if [[ $? != 0 ]] ; then
+    echo "==> tsc: not installed"
+    exit 1
+fi
+echo "==> tsc: " && tsc --version
+
 # git submodules
 echo "==> git: update submodules"
 git submodule update --init --recursive
