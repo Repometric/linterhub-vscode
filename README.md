@@ -1,6 +1,7 @@
 Linterhub VSCode Extension
 =====
 [![Build Status](https://travis-ci.org/Repometric/linterhub-vscode.svg?branch=master)](https://travis-ci.org/Repometric/linterhub-vscode)
+[![Build Status](https://circleci.com/gh/Repometric/linterhub-vscode.svg?style=shield)](https://circleci.com/gh/Repometric/linterhub-vscode)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/1b144c20d0e34388a9ca21d764782181)](https://www.codacy.com/app/Repometric/linterhub-vscode?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Repometric/linterhub-vscode&amp;utm_campaign=Badge_Grade)
 [![Issue Count](https://codeclimate.com/github/Repometric/linterhub-vscode/badges/issue_count.svg)](https://codeclimate.com/github/Repometric/linterhub-vscode)
 

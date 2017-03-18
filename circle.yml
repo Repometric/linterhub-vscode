@@ -4,7 +4,7 @@ machine:
 
 dependencies:
   override:
-    - script/cibuild.sh
+    - bash script/cibuild.sh
 
 test:
   override:
