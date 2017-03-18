@@ -1,7 +1,7 @@
-import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams, LinterVersionRequest, LinterInstallRequest } from './ide.vscode'
+import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams, LinterVersionRequest, LinterInstallRequest } from './ide.vscode';
 import { window, StatusBarAlignment, TextEditor } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
-import * as utils from './utils'
+import * as utils from './utils';
 
 export class Integration {
     client: LanguageClient;
@@ -25,8 +25,8 @@ export class Integration {
             .then((catalog) => {
                 this.client.info(catalog.toString());
                 return catalog.linters.map(linter => {
-                    return { label: linter.name, description: linter.description }
-                })
+                    return { label: linter.name, description: linter.description };
+                });
             })
             .then(catalog => window.showQuickPick(catalog, { matchOnDescription: true }));
     }
@@ -37,19 +37,19 @@ export class Integration {
                     let name = item.label;
                     return this.client.sendRequest(LinterVersionRequest, { linter: name })
                         .then((result) => {
-                            if(result.Installed)
+                            if (result.Installed) {
                                 return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                                     .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully activated.`));
-                            else
-                            {
+                            }
+                            else {
                                 window.showWarningMessage(`Linter "${name}" is not installed. Trying to install...`);
                                 return this.client.sendRequest(LinterInstallRequest, { linter: name })
                                     .then((result) => {
-                                        if(result.Installed)
+                                        if(result.Installed) {
                                             return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                                                 .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully installed and activated.`));
-                                        else
-                                        {
+                                        } 
+                                        else {
                                             window.showWarningMessage(`Can't install "${name}". Perhaps cli can't execute script`);
                                             return null;
                                         }
@@ -77,13 +77,13 @@ export class Integration {
         return this.client.outputChannel.show();
     }
     updateStatus(params: StatusParams) {
-        if (params.state == Status.progressStart) {
+        if (params.state === Status.progressStart) {
             return this.progressControl.update(params.id, true);
         }
-        if (params.state == Status.progressEnd) {
+        if (params.state === Status.progressEnd) {
             return this.progressControl.update(params.id, false);
         }
-        if (params.state == Status.noCli) {
+        if (params.state === Status.noCli) {
             return this.progressControl.update(params.id, false);
         }
 
@@ -111,7 +111,7 @@ export class Integration {
         this.showBar(this.progressBarItem, false);
 
         window.onDidChangeActiveTextEditor((doc) => {
-            this.updateProgressVisibility(doc)
+            this.updateProgressVisibility(doc);
         });
     }
     progressControl: utils.ProgressManager;

@@ -1,7 +1,7 @@
-import { Settings, StatusInterface, LoggerInterface } from 'linterhub-ide'
+import { Settings, StatusInterface, LoggerInterface } from 'linterhub-ide';
 import { IConnection, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
-import Uri from 'vscode-uri'
-import { UpdateConfigRequest, StatusNotification, Status } from './ide.vscode'
+import Uri from 'vscode-uri';
+import { UpdateConfigRequest, StatusNotification, Status } from './ide.vscode';
 
 class FileResult
 {
@@ -50,8 +50,9 @@ class StatusLogger implements StatusInterface
     public update(params: any, progress?: boolean, text?: string)
     {
         let id: string;
-        if(params != null)
+        if(params !== null) {
             id = (params.id).toString();
+        }
         this.connection.sendNotification(StatusNotification, { state: progress ? Status.progressStart : Status.progressEnd, id: id });
         this.connection.console.info(this.prefix + text);
     }
@@ -126,7 +127,7 @@ export class IntegrationLogic {
      */
     private getFileResult(file: any, name: any, document: any): FileResult {
         // TODO: Construct it as URI.
-        let fullPath = document != null ? document.uri : 'file://' + this.project + '\\' + file.Path;
+        let fullPath = document !== null ? document.uri : 'file://' + this.project + '\\' + file.Path;
         let diagnostics = file.Errors.map((error: any) => this.convertError(error, name));
         return new FileResult(fullPath.toString(), diagnostics);
     }

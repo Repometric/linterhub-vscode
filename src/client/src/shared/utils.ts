@@ -40,7 +40,7 @@ export class Progress {
         if (this.inProgress) {
             clearInterval(this.id);
             this.inProgress = false;
-            this.callback('⠀')
+            this.callback('⠀');
         }
     }
 }
@@ -84,7 +84,7 @@ export class ProgressManager {
     }
     update(id: string, inProgress?: boolean): void {
         // Progress is unknown
-        if (inProgress == null) {
+        if (inProgress === null) {
             if (this.queue.update(id)) {
                 // Display progress
                 this.progress.start();

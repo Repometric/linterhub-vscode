@@ -1,5 +1,5 @@
 import { NotificationType } from 'vscode-languageserver';
-import { RequestType } from 'vscode-languageserver'
+import { RequestType } from 'vscode-languageserver';
 import {StatusParams, ActivateParams, CatalogResult, NoParams, LinterVersionParams, LinterVersionResult, AnalyzeParams, InstallResult} from 'linterhub-ide';
 
 export enum Status {

@@ -4,8 +4,8 @@ import * as path from 'path';
 import { workspace, ExtensionContext } from 'vscode';
 import { window, commands } from 'vscode';
 import { LanguageClient, LanguageClientOptions, TransportKind, ServerOptions } from 'vscode-languageclient';
-import { StatusNotification, ConfigRequest, UpdateConfigRequest } from './shared/ide.vscode'
-import { Integration } from './shared/ide.vscode.client'
+import { StatusNotification, ConfigRequest, UpdateConfigRequest } from './shared/ide.vscode';
+import { Integration } from './shared/ide.vscode.client';
 
 export function activate(context: ExtensionContext) {
 	let integration = new Integration(null);
