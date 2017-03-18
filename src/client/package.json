@@ -117,6 +117,7 @@
   "devDependencies": {
     "typescript": "^2.0.3",
     "vscode": "^1.0.0",
+    "linterhub-ide": "^0.3.6",
     "@types/node": "^6.0.40"
   },
   "dependencies": {

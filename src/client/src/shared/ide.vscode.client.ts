@@ -1,7 +1,8 @@
-import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, StatusParams, LinterVersionRequest, LinterInstallRequest } from './ide.vscode';
+import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, LinterVersionRequest, LinterInstallRequest, IgnoreWarningRequest } from './ide.vscode'
+import { Types } from 'linterhub-ide'
 import { window, StatusBarAlignment, TextEditor } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
-import * as utils from './utils';
+import * as utils from './utils'
 
 export class Integration {
     client: LanguageClient;
@@ -19,14 +20,17 @@ export class Integration {
     analyzeFile(path: string): Thenable<void> {
         return this.client.sendRequest(AnalyzeRequest, { path: path });
     }
+    ignoreWarning(params: Types.IgnoreWarningParams): Thenable<string> {
+        return this.client.sendRequest(IgnoreWarningRequest, params);
+    }
     selectLinter() {
         // TODO: Show added-and-active(for deactivate)/missing-or-not-active(for activate) linters?
         return this.client.sendRequest(CatalogRequest, { })
             .then((catalog) => {
                 this.client.info(catalog.toString());
                 return catalog.linters.map(linter => {
-                    return { label: linter.name, description: linter.description };
-                });
+                    return { label: linter.name, description: linter.description }
+                })
             })
             .then(catalog => window.showQuickPick(catalog, { matchOnDescription: true }));
     }
@@ -36,20 +40,20 @@ export class Integration {
                 if (item) {
                     let name = item.label;
                     return this.client.sendRequest(LinterVersionRequest, { linter: name })
-                        .then((result) => {
-                            if (result.Installed) {
+                        .then((result: Types.LinterVersionResult) => {
+                            if(result.Installed)
                                 return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                                     .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully activated.`));
-                            }
-                            else {
+                            else
+                            {
                                 window.showWarningMessage(`Linter "${name}" is not installed. Trying to install...`);
                                 return this.client.sendRequest(LinterInstallRequest, { linter: name })
-                                    .then((result) => {
-                                        if(result.Installed) {
+                                    .then((result: Types.LinterVersionResult) => {
+                                        if(result.Installed)
                                             return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
                                                 .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully installed and activated.`));
-                                        } 
-                                        else {
+                                        else
+                                        {
                                             window.showWarningMessage(`Can't install "${name}". Perhaps cli can't execute script`);
                                             return null;
                                         }
@@ -76,14 +80,14 @@ export class Integration {
     showOutput(): void {
         return this.client.outputChannel.show();
     }
-    updateStatus(params: StatusParams) {
-        if (params.state === Status.progressStart) {
+    updateStatus(params: Types.StatusParams) {
+        if (params.state == Status.progressStart) {
             return this.progressControl.update(params.id, true);
         }
-        if (params.state === Status.progressEnd) {
+        if (params.state == Status.progressEnd) {
             return this.progressControl.update(params.id, false);
         }
-        if (params.state === Status.noCli) {
+        if (params.state == Status.noCli) {
             return this.progressControl.update(params.id, false);
         }
 
@@ -111,7 +115,7 @@ export class Integration {
         this.showBar(this.progressBarItem, false);
 
         window.onDidChangeActiveTextEditor((doc) => {
-            this.updateProgressVisibility(doc);
+            this.updateProgressVisibility(doc)
         });
     }
     progressControl: utils.ProgressManager;
