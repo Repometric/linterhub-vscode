@@ -31,7 +31,7 @@ export class Progress {
             return;
         }
 
-        this.id = setInterval(function () {                   
+        this.id = setInterval(function () {
             this.callback(this.progressStep.next());
         }.bind(this), this.interval);
         this.inProgress = true;

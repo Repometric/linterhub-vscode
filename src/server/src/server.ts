@@ -1,30 +1,27 @@
-
 import {
 	createConnection, IConnection,
 	InitializeResult,
 	TextDocuments,
 	IPCMessageReader, IPCMessageWriter, Command, Diagnostic
 } from 'vscode-languageserver';
-import { ActivateRequest, AnalyzeRequest, IgnoreWarningRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from './shared/ide.vscode'
-
-import { IntegrationLogic } from './shared/ide.vscode.server'
-import { Integration, Run, Types} from 'linterhub-ide'
-import * as path from 'path'
+import { ActivateRequest, AnalyzeRequest, IgnoreWarningRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from 'linterhub-vscode-shared';
+import { IntegrationLogic, Logger } from './integrationLogic';
+import { Linterhub, LinterhubTypes } from 'linterhub-ide';
+import * as path from 'path';
 
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
-
 let documents: TextDocuments = new TextDocuments();
-let integration: Integration = null;
 let integrationLogic: IntegrationLogic = null;
 let projectRoot: string = null;
+let logger: Logger = null;
 documents.listen(connection);
 
 documents.onDidOpen((event) => {
-	integration.analyzeFile(event.document.uri, Run.onOpen, event.document);
+	Linterhub.analyzeFile(event.document.uri, LinterhubTypes.Run.onOpen, event.document);
 });
 
 documents.onDidSave((event) => {
-	integration.analyzeFile(event.document.uri, Run.onSave, event.document);
+	Linterhub.analyzeFile(event.document.uri, LinterhubTypes.Run.onSave, event.document);
 });
 
 documents.onDidClose(() => {
@@ -32,74 +29,76 @@ documents.onDidClose(() => {
 });
 
 connection.onInitialize((params): InitializeResult => {
-	connection.console.info("SERVER: start.");
+	logger = new Logger(connection);
+	logger.changePrefix("Linterhub Server: ");
+	logger.info("Start");
 	projectRoot = params.rootPath;
 	return {
 		capabilities: {
 			textDocumentSync: documents.syncKind,
 			codeActionProvider: true
 		}
-	}
+	};
 });
 
 connection.onShutdown(() => {
-	connection.console.info("SERVER: stop.");
+	logger.info("Stop");
 });
 
 connection.onDidChangeConfiguration((params) => {
-	connection.console.info("SERVER: initialize.");
+	logger.info("Initialize");
 	for (let i = 0; i < params.settings.linterhub.run.length; ++i) {
-		params.settings.linterhub.run[i] = Run[params.settings.linterhub.run[i]];
+		params.settings.linterhub.run[i] = LinterhubTypes.Run[params.settings.linterhub.run[i]];
 	}
-	params.settings.linterhub.cliRoot = path.join(__dirname, "/../")
+	params.settings.linterhub.cliRoot = path.join(__dirname, "/../");
 	integrationLogic = new IntegrationLogic(projectRoot, connection, "0.3.4");
-	integration = new Integration(integrationLogic, params.settings)
-	integration.version().then(version => {
-		connection.console.info("SERVER: " + version.toString().replace(/(?:\r\n|\r|\n)/g, ', '));
+	Linterhub.initializeLinterhub(integrationLogic, params.settings);
+	Linterhub.version().then(version => {
+		logger.info(version.toString().replace(/(?:\r\n|\r|\n)/g, ', '));
 	}).catch(function (reason) {
-		connection.console.error(reason.toString());
-		connection.console.error(reason.message);
+		logger.error(reason.toString());
+		logger.error(reason.message);
 		connection.sendNotification(StatusNotification, { state: Status.noCli, id: null });
 	});
 });
 
 connection.onRequest(CatalogRequest, () => {
-	connection.console.info("SERVER: get catalog.");
-	return integration.catalog().then(linters => {
+	logger.info("Get catalog...");
+	return Linterhub.catalog().then(linters => {
 		return { linters: linters };
 	});
 });
 
 connection.onRequest(ActivateRequest, (params) => {
 	if (params.activate) {
-		connection.console.info("SERVER: activate linter.");
-		return integration.activate(params.linter);
+		logger.info("Activate linter " + params.linter);
+		return Linterhub.activate(params.linter);
 	} else {
-		connection.console.info("SERVER: deactivate linter.");
-		return integration.deactivate(params.linter);
+		logger.info("Deactivate linter " + params.linter);
+		return Linterhub.deactivate(params.linter);
 	}
 });
 
 connection.onRequest(LinterVersionRequest, (params) => {
-	connection.console.info("SERVER: request " + params.linter + " version...");
-	return integration.linterVersion(params.linter, false);
+	logger.info("Request " + params.linter + " version...");
+	return Linterhub.linterVersion(params.linter, false);
 });
 
 connection.onRequest(LinterInstallRequest, (params) => {
-	connection.console.info("SERVER: trying to install " + params.linter + "...");
-	return integration.linterVersion(params.linter, true);
+	logger.info("Trying to install " + params.linter + "...");
+	return Linterhub.linterVersion(params.linter, true);
 });
 
 connection.onRequest(AnalyzeRequest, (params) => {
 	if (params.full) {
-		return integration.analyze();
+		return Linterhub.analyze();
 	} else {
-		return integration.analyzeFile(params.path, Run.force);
+		return Linterhub.analyzeFile(params.path, LinterhubTypes.Run.force);
 	}
 });
 
-connection.onRequest(IgnoreWarningRequest, (params: Types.IgnoreWarningParams) => {
-	return integration.ignoreWarning(params).then(() => integration.analyzeFile(integrationLogic.constructURI(params.file), Run.force));
+connection.onRequest(IgnoreWarningRequest, (params: LinterhubTypes.IgnoreWarningParams) => {
+	return Linterhub.ignoreWarning(params).then(() => Linterhub.analyzeFile(integrationLogic.constructURI(params.file), LinterhubTypes.Run.force));
 });
 
 connection.onCodeAction((params) => {
