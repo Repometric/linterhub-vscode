@@ -6,7 +6,7 @@ import {
 } from 'vscode-languageserver';
 import { ActivateRequest, AnalyzeRequest, IgnoreWarningRequest, CatalogRequest, Status, StatusNotification, LinterVersionRequest, LinterInstallRequest } from 'linterhub-vscode-shared';
 import { IntegrationLogic, Logger } from './integrationLogic';
-import { Linterhub, LinterhubTypes } from 'linterhub-ide';
+import { Linterhub, LinterhubTypes } from '@repometric/linterhub-ide';
 import * as path from 'path';
 
 let connection: IConnection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));

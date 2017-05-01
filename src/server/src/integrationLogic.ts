@@ -1,4 +1,4 @@
-import { LinterhubTypes } from 'linterhub-ide';
+import { LinterhubTypes } from '@repometric/linterhub-ide';
 import { IConnection, Diagnostic, DiagnosticSeverity, PublishDiagnosticsParams } from 'vscode-languageserver';
 import Uri from 'vscode-uri';
 import * as path from 'path';

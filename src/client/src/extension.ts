@@ -6,7 +6,7 @@ import { window, commands } from 'vscode';
 import { LanguageClient, LanguageClientOptions, TransportKind, ServerOptions } from 'vscode-languageclient';
 import { StatusNotification, ConfigRequest, UpdateConfigRequest } from 'linterhub-vscode-shared';
 import { Integration } from './integration';
-import { LinterhubTypes } from 'linterhub-ide';
+import { LinterhubTypes } from '@repometric/linterhub-ide';
 
 export function activate(context: ExtensionContext) {
 	let integration = new Integration();

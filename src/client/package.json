@@ -124,12 +124,12 @@
   "devDependencies": {
     "typescript": "^2.0.3",
     "vscode": "^1.0.0",
-    "@types/node": "^6.0.40"
+    "@types/node": "^7.0.14"
   },
   "dependencies": {
     "vscode-languageclient": "^2.6.3",
     "vscode-languageserver": "^2.6.2",
-    "linterhub-ide": "0.4.13",
-    "linterhub-vscode-shared": "^0.0.2"
+    "@repometric/linterhub-ide": "0.4.19",
+    "linterhub-vscode-shared": "^0.0.5"
   }
 }

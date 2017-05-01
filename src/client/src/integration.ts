@@ -1,5 +1,5 @@
 import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, LinterVersionRequest, LinterInstallRequest, IgnoreWarningRequest } from 'linterhub-vscode-shared';
-import { LinterhubTypes } from 'linterhub-ide';
+import { LinterhubTypes } from '@repometric/linterhub-ide';
 import { window, StatusBarAlignment, TextEditor } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
 import * as utils from './utils';
