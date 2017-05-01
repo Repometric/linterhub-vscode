@@ -1,7 +1,8 @@
-import { Settings, StatusInterface, LoggerInterface, AnalyzeResultInterface, AnalyzeFileInterface, AnalyzeErrorInterface } from 'linterhub-ide'
+import { LinterhubTypes } from '@repometric/linterhub-ide';
 import { IConnection, Diagnostic, DiagnosticSeverity, PublishDiagnosticsParams } from 'vscode-languageserver';
-import Uri from 'vscode-uri'
-import { UpdateConfigRequest, StatusNotification, Status } from './ide.vscode'
+import Uri from 'vscode-uri';
+import * as path from 'path';
+import { UpdateConfigRequest, StatusNotification, Status } from 'linterhub-vscode-shared';
 
 class FileResult {
     public readonly uri: string;
@@ -12,12 +13,17 @@ class FileResult {
     }
 }
 
-class Logger implements LoggerInterface {
+export class Logger implements LinterhubTypes.LoggerInterface {
     private connection: IConnection;
-    private prefix: string = "SERVER: ";
+    private prefix: string = "Linterhub Ide: ";
 
     constructor(connection: IConnection) {
         this.connection = connection;
+    }
+
+    public changePrefix(prefix: string)
+    {
+        this.prefix = prefix;
     }
 
     public info(string: string): void {
@@ -31,30 +37,25 @@ class Logger implements LoggerInterface {
     }
 }
 
-class StatusLogger implements StatusInterface {
+class StatusLogger implements LinterhubTypes.StatusInterface {
     private connection: IConnection;
-    private prefix: string = "SERVER: ";
 
     constructor(connection: IConnection) {
         this.connection = connection;
     }
 
-    public update(params: any, progress?: boolean, text?: string) {
-        let id: string;
-        if (params != null)
-            id = (params.id).toString();
+    public update(id: string, progress: boolean) {
         this.connection.sendNotification(StatusNotification, { state: progress ? Status.progressStart : Status.progressEnd, id: id });
-        this.connection.console.info(this.prefix + text);
     }
 }
 
 
 
 export class IntegrationLogic {
-    public linterhub_version: string;
-    public logger: LoggerInterface;
-    public connection: IConnection;
-    public status: StatusInterface;
+    private linterhub_version: string;
+    public logger: LinterhubTypes.LoggerInterface;
+    private connection: IConnection;
+    public status: LinterhubTypes.StatusInterface;
     public project: string;
 
 
@@ -68,10 +69,13 @@ export class IntegrationLogic {
 
 
     public normalizePath(path_: string): string {
-        return Uri.parse(path_).fsPath;
+        /*path_ = path_.replace('file://', '')
+            .replace(this.project + '/', '')
+            .replace(this.project + '\\', '');*/
+        return path.relative(this.project, Uri.parse(path_).fsPath);
     }
 
-    public saveConfig(settings: Settings): void {
+    public saveConfig(settings: LinterhubTypes.Settings): void {
         this.connection.sendRequest(UpdateConfigRequest, { cliPath: settings.linterhub.cliPath, mode: settings.linterhub.mode });
     }
 
@@ -81,7 +85,7 @@ export class IntegrationLogic {
      * @param data The raw data from CLI.
      */
     public sendDiagnostics(data: string, document: any = null) {
-        let json: AnalyzeResultInterface[] = JSON.parse(data);
+        let json: LinterhubTypes.AnalyzeResultInterface[] = JSON.parse(data);
         let files: string[] = [];
         let results: PublishDiagnosticsParams[] = [];
         // TODO: Simplify logic.
@@ -89,7 +93,7 @@ export class IntegrationLogic {
         for (let index = 0; index < json.length; index++) {
             var linterResult = json[index];
             // Iterate files in linter result
-            linterResult.Model.Files.forEach((file: AnalyzeFileInterface) => {
+            linterResult.Model.Files.forEach((file: LinterhubTypes.AnalyzeFileInterface) => {
                 let result: FileResult = this.getFileResult(file, linterResult.Name, document);
                 // Group messages by file name
                 let fileIndex: number = files.indexOf(file.Path);
@@ -107,28 +111,25 @@ export class IntegrationLogic {
             this.connection.sendDiagnostics(results[index]);
         }
     }
-    /**
-     * Convert file result.
-     *
-     * @param file The file object.
-     * @param name The linter name.
-     */
+
     public constructURI(path: string): string {
         return 'file://' + this.project + '/' + path;
     }
-    private getFileResult(file: AnalyzeFileInterface, name: string, document: any): FileResult {
+
+    private getFileResult(file: LinterhubTypes.AnalyzeFileInterface, name: string, document: any): FileResult {
         // TODO: Construct it as URI.
-        let fullPath = document != null ? document.uri : this.constructURI(file.Path);
-        let diagnostics = file.Errors.map((error: AnalyzeErrorInterface) => this.convertError(error, name));
+        let fullPath = document !== null ? document.uri : this.constructURI(file.Path);
+        let diagnostics = file.Errors.map((error: LinterhubTypes.AnalyzeErrorInterface) => this.convertError(error, name));
         return new FileResult(fullPath.toString(), diagnostics);
     }
+
     /**
      * Convert message from CLI to IDE format.
      *
      * @param message The message from CLI.
      * @param name The linter name.
      */
-    private convertError(message: AnalyzeErrorInterface, name: string): Diagnostic {
+    private convertError(message: LinterhubTypes.AnalyzeErrorInterface, name: string): Diagnostic {
         let severity = DiagnosticSeverity.Warning;
         switch (Number(message.Severity)) {
             case 0: severity = DiagnosticSeverity.Error; break;
@@ -146,7 +147,7 @@ export class IntegrationLogic {
                 end: { line: row.End - 1, character: column.End }
             },
             message: message.Message,
-            source: "linterhub:" + name,
+            source: "Linterhub: " + name,
             code: message.Rule.Name
         };
     }
