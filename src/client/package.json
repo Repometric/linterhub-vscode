@@ -1,20 +1,20 @@
 {
   "name": "linterhub-vscode-client",
   "displayName": "Linterhub",
-  "description": "Linterhub extension",
+  "description": "Linterhub extension for Visual Studio Code",
   "author": "Repometric",
   "license": "MIT",
-  "version": "0.3.5",
+  "version": "0.6.0",
   "publisher": "Repometric",
   "repository": {
 		"type": "git",
 		"url": "https://github.com/repometric/linterhub-vscode.git"
 	},
 	"bugs": {
-		"url": "https://github.com/Repometric/linterhub-vscode/issues"
+		"url": "https://github.com/repometric/linterhub-vscode/issues"
 	},
   "engines": {
-    "vscode": "^1.4.0"
+    "vscode": "^1.8.0"
   },
   "icon": "icon.svg",
   "categories": [
@@ -29,91 +29,19 @@
       {
         "category": "Linterhub",
         "command": "linterhub.activate",
-        "title": "Activate linter"
+        "title": "Activate engine"
       },
       {
         "category": "Linterhub",
         "command": "linterhub.deactivate",
-        "title": "Deactivate linter"
-      },
-      {
-        "category": "Linterhub",
-        "command": "linterhub.analyze",
-        "title": "Analyze project"
-      },
-      {
-        "category": "Linterhub",
-        "command": "linterhub.analyzeFile",
-        "title": "Analyze file"
+        "title": "Deactivate engine"
       },
       {
         "category": "Linterhub",
         "command": "linterhub.showOutput",
         "title": "Show output"
       }
-    ],
-    "configuration": {
-      "type": "object",
-      "title": "linterhub",
-      "properties": {
-        "linterhub.enable": {
-          "type": "boolean",
-          "default": true,
-          "description": "Controls whether linterhub is enabled or not."
-        },
-        "linterhub.cliPath": {
-          "type": ["string", "null"],
-          "default": null,
-          "description": "A path of Linterhub CLI."
-        },
-        "linterhub.run": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "onOpen",
-              "onSave"
-            ]
-          },
-          "default": [
-            "onOpen",
-            "onSave"
-          ],
-          "description": "Run linterhub on save (onSave) or on open (onOpen)."
-        },
-        "linterhub.mode": {
-          "type": "string",
-          "enum": [
-            "dotnet",
-            "native",
-            "docker"
-          ],
-          "default": "native",
-          "description": "CLI run mode (dotnet, native or docker)."
-        },
-        "linterhub.languages": {
-          "type": "array",
-          "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "language": {
-                      "type": "string",
-                      "description": "The language id to be validated."
-                    }
-                  }
-                }
-              ]
-          },
-          "default": ["coffeescript", "javascript", "css", "html", "scss", "sass", "typescript"],
-          "description": "An array of language ids which should be validated."
-        }
-      }
-    }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
@@ -122,14 +50,12 @@
     "postinstall": "node ./node_modules/vscode/bin/install"
   },
   "devDependencies": {
-    "typescript": "^2.0.3",
-    "vscode": "^1.0.0",
-    "@types/node": "^7.0.14"
+    "typescript": "^2.4.2",
+    "vscode": "^1.1.2",
+    "@types/node": "^8.0.17"
   },
   "dependencies": {
-    "vscode-languageclient": "^2.6.3",
-    "vscode-languageserver": "^2.6.2",
-    "@repometric/linterhub-ide": "0.4.19",
-    "linterhub-vscode-shared": "^0.0.5"
+    "vscode-languageclient": "^3.3.0",
+    "@repometric/linterhub-ide": "^0.6.0-beta.6"
   }
 }
