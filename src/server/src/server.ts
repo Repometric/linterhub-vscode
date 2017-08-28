@@ -17,7 +17,7 @@ class Server {
 	private static project: string;
 	private static converter: Converter;
 
-	private static analyzeLocker: boolean = false;
+	private static analyzeTimer: NodeJS.Timer = null;
 
 	public static Init(): void {
 		this.connection = createConnection(new IPCMessageReader(process), new IPCMessageWriter(process));
@@ -147,8 +147,12 @@ class Server {
 	}
 
 	private static onAnalyze(event: TextDocumentChangeEvent) {
-		if (!Server.analyzeLocker) {
-			Server.analyzeLocker = true;
+		if (Server.analyzeTimer != null) {
+			clearTimeout(Server.analyzeTimer);
+			Server.analyzeTimer = null;
+		}
+
+		Server.analyzeTimer = setTimeout((event: TextDocumentChangeEvent) => {
 			let path_ = Server.parsePath(event.document.uri);
 			Linterhub.analyze(Server.project, path_.folder, path_.file, null, event.document.getText())
 				.then((data: EngineResult[]) => {
@@ -158,13 +162,13 @@ class Server {
 							diagnostics: []
 						})
 					}
-					Server.analyzeLocker = false;
 					Server.converter.analyze(data).forEach(Server.connection.sendDiagnostics);
+					Server.analyzeTimer = null;
 				})
 				.catch((x) => {
 					Server.log.info(x);
 				})
-		}
+		}, 500, event);
 	}
 
 	private static onCodeAction(params: CodeActionParams) {
