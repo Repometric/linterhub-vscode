@@ -1,87 +1,65 @@
-import { ActivateRequest, AnalyzeRequest, CatalogRequest, Status, LinterVersionRequest, LinterInstallRequest, IgnoreWarningRequest } from 'linterhub-vscode-shared';
-import { LinterhubTypes } from '@repometric/linterhub-ide';
-import { window, StatusBarAlignment, TextEditor } from 'vscode';
+import { window, StatusBarAlignment, StatusBarItem } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient';
-import * as utils from './utils';
+import { Engine, DetectedEngine, DetectType } from '@repometric/linterhub-ide';
 
 export class Integration {
     private client: LanguageClient;
     public languages: string[];
-    private progressControl: utils.ProgressManager;
-    public statusBarItem: any;
-    private progressBarItem: any;
+    public statusBarItem: StatusBarItem;
+    private progressBarItem: StatusBarItem;
 
     public setClient(client: LanguageClient): void {
         this.client = client;
+        /*client.onNotification("linterhub/proxy", () =>
+		{
+			const config = workspace.getConfiguration();
+			return {
+				proxy: config.get<string>('http.proxy'),
+				strictSSL: config.get('http.proxyStrictSSL', true)
+			};
+		});*/
+        client.onNotification("linterhub/progress/visibility", (visibility: boolean) => this.showBar(this.progressBarItem, visibility));
+        client.onNotification("linterhub/progress/text", (text: string) => this.progressBarItem.text = text);
     }
 
-    public analyze(): Thenable<void> {
-        return this.client.sendRequest(AnalyzeRequest, { full: true });
+    public ignoreWarning(params: any): Thenable<string> {
+        return this.client.sendRequest("linterhub/ignore", params);
     }
 
-    public analyzeFile(path: string): Thenable<void> {
-        return this.client.sendRequest(AnalyzeRequest, { path: path });
-    }
-
-    public ignoreWarning(params: LinterhubTypes.IgnoreWarningParams): Thenable<string> {
-        return this.client.sendRequest(IgnoreWarningRequest, params);
-    }
-
-    private selectLinter(): Thenable<{label: string, description: string}> {
-        // TODO: Show added-and-active(for deactivate)/missing-or-not-active(for activate) linters?
-        return this.client.sendRequest(CatalogRequest, { })
-            .then((catalog) => {
-                this.client.info(catalog.toString());
-                return catalog.linters.map(linter => {
-                    return { label: linter.name, description: linter.description };
+    private selectLinter(type: boolean): Thenable<{ label: string, description: string }> {
+        return this.client.sendRequest("linterhub/catalog")
+            .then((catalog: Engine[]) => {
+                return this.client.sendRequest("linterhub/fetch")
+                .then((fetched: DetectedEngine[]) => {
+                    return catalog.filter(x => x.active != type).map(linter => {
+                        let description = linter.description;
+                        fetched.filter(x => x.name == linter.name).forEach(x => {
+                            switch(x.found){
+                                case DetectType.sourceExtension:
+                                    description = `[by extension] ${description}`;
+                                    break;
+                                case DetectType.projectConfig:
+                                    description = `[declarated in project config] ${description}`;
+                                    break;
+                                case DetectType.engineConfig:
+                                    description += `[found engine config] ${description}`;
+                                    break;
+                            }
+                        })
+                        return { label: linter.name, description: description };
+                    });
                 });
             })
             .then(catalog => window.showQuickPick(catalog, { matchOnDescription: true }));
     }
 
-    public activate(): Thenable<string> {
-        return this.selectLinter()
+    public activate(type: boolean): Thenable<string> {
+        return this.selectLinter(type)
             .then(item => {
                 if (item) {
                     let name = item.label;
-                    return this.client.sendRequest(LinterVersionRequest, { linter: name })
-                        .then((result: LinterhubTypes.LinterVersionResult) => {
-                            if(result.Installed)
-                            {
-                                return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
-                                    .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully activated.`));
-                            }
-                            else
-                            {
-                                window.showWarningMessage(`Linter "${name}" is not installed. Trying to install...`);
-                                return this.client.sendRequest(LinterInstallRequest, { linter: name })
-                                    .then((result: LinterhubTypes.LinterVersionResult) => {
-                                        if(result.Installed)
-                                        {
-                                            return this.client.sendRequest(ActivateRequest, { activate: true, linter: name })
-                                                .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully installed and activated.`));
-                                        }
-                                        else
-                                        {
-                                            window.showWarningMessage(`Can't install "${name}". Perhaps cli can't execute script as administrator`);
-                                            return null;
-                                        }
-                                    });
-                            }
-                        });
-                }
-
-                return null;
-            });
-    }
-
-    public deactivate(): Thenable<string> {
-        return this.selectLinter()
-            .then(item => {
-                if (item) {
-                    let name = item.label;
-                    return this.client.sendRequest(ActivateRequest, { activate: false, linter: name })
-                        .then(() => window.showInformationMessage(`Linter "${name}" was sucesfully deactivated.`));
+                    return this.client.sendRequest("linterhub/activate", { activate: type, engine: name })
+                        .then(() => window.showInformationMessage(`Engine "${name}" was sucesfully ${type ? "activated" : "deactivated"}.`));
                 } else {
                     return null;
                 }
@@ -92,30 +70,12 @@ export class Integration {
         return this.client.outputChannel.show();
     }
 
-    public updateStatus(params: LinterhubTypes.StatusParams): void {
-        if (params.state === Status.progressStart) {
-            return this.progressControl.update(params.id, true);
-        }
-        if (params.state === Status.progressEnd) {
-            return this.progressControl.update(params.id, false);
-        }
-        if (params.state === Status.noCli) {
-            return this.progressControl.update(params.id, false);
-        }
-
-    }
-
     private showBar(bar: any, show: boolean): void {
         if (show) {
             bar.show();
         } else {
             bar.hide();
         }
-    }
-
-    public updateProgressVisibility(editor: TextEditor) {
-        this.client.info('OPEN: ' + editor.document.uri.toString());
-        this.progressControl.update(editor.document.uri.toString());
     }
 
     public setupUi() {
@@ -126,21 +86,5 @@ export class Integration {
 
         this.progressBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 10);
         this.showBar(this.progressBarItem, false);
-
-        window.onDidChangeActiveTextEditor((doc) => {
-            this.updateProgressVisibility(doc);
-        });
-    }
-
-    public initialize(): Promise<{}> {
-        let promise = new Promise((resolve) => {
-            this.languages = ["javascript"];
-            this.progressControl = new utils.ProgressManager(
-                (visible) => this.showBar(this.progressBarItem, visible),
-                (text) => this.progressBarItem.text = text);
-            resolve();
-        });
-
-        return promise;
     }
 }
